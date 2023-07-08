@@ -4,7 +4,9 @@ Solving a class of elliptic partial differential equations(PDEs) with multiple s
 # Title
 Solving a class of multi-scale elliptic PDEs by means of Fourier-based mixed physics informed neural networks
 
-Xi'an Li
+created by Xi'an Li, Jinran Wu and You-Gan Wang
+
+[[Paper]]([[Paper]](https://arxiv.org/pdf/2009.14597.pdf))
 
 # Abstract
 

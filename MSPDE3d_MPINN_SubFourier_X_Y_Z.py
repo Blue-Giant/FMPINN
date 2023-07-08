@@ -184,19 +184,6 @@ class MscaleDNN(tn.Module):
         return UNN, loss2func
 
     def loss2bd(self, XYZ_bd=None, Ubd_exact=None, if_lambda2Ubd=True, loss_type='L2_loss', scale2lncosh=0.1):
-        """
-        Calculating the loss of Laplace equation (*) on the boundary points for given boundary
-        -Laplace U = f,  in Omega
-        U = g            on Partial Omega
-        Args:
-            XYZ_bd:        the input data of variable. ------  float, shape=[B,D]
-            Ubd_exact:     the exact function or array for boundary condition
-            if_lambda2Ubd: the Ubd_exact is a lambda function or an array  ------ Bool
-            loss_type:     the type of loss function(Ritz, L2, Lncosh)      ------ string
-            scale2lncosh:  if the loss is lncosh, using it                  ------- float
-        return:
-            loss_bd: the output loss on the boundary points for given boundary
-        """
         assert (XYZ_bd is not None)
         assert (Ubd_exact is not None)
 
@@ -373,8 +360,8 @@ def solve_Multiscale_PDE(R):
             batchsize_it, 1, region_a=region_lb, region_b=region_rt, to_float=True, to_cuda=R['use_gpu'],
             gpu_no=R['gpuNo'], use_grad2x=True)
         xyz_bottom_batch, xyz_top_batch, xyz_left_batch, xyz_right_batch, xyz_front_batch, xyz_behind_batch = \
-            dataUtilizer2torch.rand_bd_3D(batchsize_bd, R['input_dim'], region_a=region_lb, region_b=region_rt,
-                                          to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
+            dataUtilizer2torch.rand_bd_3D_lhs(batchsize_bd, R['input_dim'], region_a=region_lb, region_b=region_rt,
+                                              to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
 
         if R['activate_penalty2bd_increase'] == 1:
             if i_epoch < int(R['max_epoch'] / 10):
@@ -394,6 +381,11 @@ def solve_Multiscale_PDE(R):
 
         if R['equa_name'] == 'multi_scale3D_4':
             force_side = MS_LaplaceEqs.get_force_side2multi_scale3D(x=x_it_batch, y=y_it_batch, z=z_it_batch)
+            UNN2train, loss_it = model.loss_in2pLaplace(
+                X=x_it_batch, Y=y_it_batch, Z=z_it_batch, fside=force_side, if_lambda2fside=False, aeps=A_eps,
+                if_lambda2aeps=True, loss_type=R['loss_type'], scale2lncosh=R['scale2lncosh'])
+        elif R['equa_name'] == 'multi_scale3D_5':
+            force_side = MS_LaplaceEqs.get_force2multi_scale3D_E5(x=x_it_batch, y=y_it_batch, z=z_it_batch)
             UNN2train, loss_it = model.loss_in2pLaplace(
                 X=x_it_batch, Y=y_it_batch, Z=z_it_batch, fside=force_side, if_lambda2fside=False, aeps=A_eps,
                 if_lambda2aeps=True, loss_type=R['loss_type'], scale2lncosh=R['scale2lncosh'])

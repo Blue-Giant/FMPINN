@@ -147,7 +147,7 @@ def true_solution2E3(input_dim=None, output_dim=None, q=2, file_name=None):
 
 
 def force_side2E3(input_dim=None, output_dim=None):
-    f_side = lambda x, y: 1.0*torch.ones_like(x)
+    f_side = lambda x, y: 5.0*torch.ones_like(x)
     return f_side
 
 
@@ -170,11 +170,11 @@ def elliptic_coef2E3(input_dim=None, output_dim=None):
     e4 = 1.0 / 31
     e5 = 1.0 / 65
     a_eps = lambda x, y: (1.0/6)*((1.1+torch.sin(2*torch.pi*x/e1))/(1.1+torch.sin(2*torch.pi*y/e1)) +
-                              (1.1+torch.sin(2*torch.pi*y/e2))/(1.1+torch.cos(2*torch.pi*x/e2)) +
-                              (1.1+torch.cos(2*torch.pi*x/e3))/(1.1+torch.sin(2*torch.pi*y/e3)) +
-                              (1.1+torch.sin(2*torch.pi*y/e4))/(1.1+torch.cos(2*torch.pi*x/e4)) +
-                              (1.1+torch.cos(2*torch.pi*x/e5))/(1.1+torch.sin(2*torch.pi*y/e5)) +
-                              torch.sin(4*(x**2)*(y**2))+1)
+                                  (1.1+torch.sin(2*torch.pi*y/e2))/(1.1+torch.cos(2*torch.pi*x/e2)) +
+                                  (1.1+torch.cos(2*torch.pi*x/e3))/(1.1+torch.sin(2*torch.pi*y/e3)) +
+                                  (1.1+torch.sin(2*torch.pi*y/e4))/(1.1+torch.cos(2*torch.pi*x/e4)) +
+                                  (1.1+torch.cos(2*torch.pi*x/e5))/(1.1+torch.sin(2*torch.pi*y/e5)) +
+                                  torch.sin(4*(x**2)*(y**2))+1)
     return a_eps
 
 
@@ -364,6 +364,72 @@ def elliptic_coef2E7(input_dim=None, output_dim=None, eps=0.1):
     return a_eps
 
 
+# 例九
+def true_solution2E9(input_dim=None, output_dim=None, q=2, file_name=None):
+    mat_true = Load_data2Mat.load_Matlab_data(filename=file_name)
+    true_key = 'u_true'
+    utrue = mat_true[true_key]
+    return utrue
+
+
+def force_side2E9(input_dim=None, output_dim=None):
+    f_side = lambda x, y: 5.0*torch.ones_like(x)
+    return f_side
+
+
+def boundary2E9(input_dim=None, output_dim=None, left_bottom=0.0, right_top=1.0):
+    # ux_left = lambda x, y: np.exp(-left_bottom)*(np.pow(y, 3) + 1.0*left_bottom)
+    # ux_right = lambda x, y: np.exp(-right_top)*(np.pow(y, 3) + 1.0*right_top)
+    # uy_bottom = lambda x, y: np.exp(-x)*(np.pow(left_bottom, 3) + x)
+    # uy_top = lambda x, y: np.exp(-x)*(np.pow(right_top, 3) + x)
+    ux_left = lambda x, y: torch.zeros_like(x)
+    ux_right = lambda x, y: torch.zeros_like(x)
+    uy_bottom = lambda x, y: torch.zeros_like(x)
+    uy_top = lambda x, y: torch.zeros_like(x)
+    return ux_left, ux_right, uy_bottom, uy_top
+
+
+def elliptic_coef2E9(input_dim=None, output_dim=None):
+    eps=0.5
+    a_eps = lambda x, y: (1.5+torch.sin(2*torch.pi*x/eps))/(1.5+torch.sin(2*torch.pi*y/eps))+ \
+                         (1.5+torch.sin(2*torch.pi*y/eps))/(1.5+torch.cos(2*torch.pi*x/eps))+ \
+                         torch.sin(4*(x**2)*(y**2))+1
+    return a_eps
+
+
+# 例十
+def true_solution2E10(input_dim=None, output_dim=None, q=2, file_name=None):
+    mat_true = Load_data2Mat.load_Matlab_data(filename=file_name)
+    true_key = 'u_true'
+    utrue = mat_true[true_key]
+    return utrue
+
+
+def force_side2E10(input_dim=None, output_dim=None):
+    f_side = lambda x, y: 5.0*torch.ones_like(x)
+    return f_side
+
+
+def boundary2E10(input_dim=None, output_dim=None, left_bottom=0.0, right_top=1.0):
+    # ux_left = lambda x, y: np.exp(-left_bottom)*(np.pow(y, 3) + 1.0*left_bottom)
+    # ux_right = lambda x, y: np.exp(-right_top)*(np.pow(y, 3) + 1.0*right_top)
+    # uy_bottom = lambda x, y: np.exp(-x)*(np.pow(left_bottom, 3) + x)
+    # uy_top = lambda x, y: np.exp(-x)*(np.pow(right_top, 3) + x)
+    ux_left = lambda x, y: torch.zeros_like(x)
+    ux_right = lambda x, y: torch.zeros_like(x)
+    uy_bottom = lambda x, y: torch.zeros_like(x)
+    uy_top = lambda x, y: torch.zeros_like(x)
+    return ux_left, ux_right, uy_bottom, uy_top
+
+
+def elliptic_coef2E10(input_dim=None, output_dim=None):
+    eps=0.05
+    a_eps = lambda x, y: (1.5+torch.sin(2*torch.pi*x/eps))/(1.5+torch.sin(2*torch.pi*y/eps))+ \
+                         (1.5+torch.sin(2*torch.pi*y/eps))/(1.5+torch.cos(2*torch.pi*x/eps))+ \
+                         torch.sin(4*(x**2)*(y**2))+1
+    return a_eps
+
+
 def get_infos2pLaplace_2D(input_dim=1, out_dim=1, mesh_number=2, pow_order2Aeps=2, intervalL=0.0, intervalR=1.0,
                           equa_name=None):
     if equa_name == 'multi_scale2D_1':
@@ -408,6 +474,20 @@ def get_infos2pLaplace_2D(input_dim=1, out_dim=1, mesh_number=2, pow_order2Aeps=
         u_left, u_right, u_bottom, u_top = boundary2E6(input_dim, out_dim, intervalL, intervalR)
         # A_eps要作用在u的每一个网格点值，所以A_eps在每一个网格点都要求值，和u类似
         A_eps = elliptic_coef2E6(input_dim, out_dim)
+    elif equa_name == 'multi_scale2D_9':
+        f = force_side2E9(input_dim, out_dim)  # f是一个向量
+        u_true_filepanp = 'dataMat2pLaplace/E9/' + str('u_true') + str(mesh_number) + str('.mat')
+        u_true = true_solution2E9(input_dim, out_dim, q=mesh_number, file_name=u_true_filepanp)
+        u_left, u_right, u_bottom, u_top = boundary2E9(input_dim, out_dim, intervalL, intervalR)
+        # A_eps要作用在u的每一个网格点值，所以A_eps在每一个网格点都要求值，和u类似
+        A_eps = elliptic_coef2E9(input_dim, out_dim)
+    elif equa_name == 'multi_scale2D_10':
+        f = force_side2E10(input_dim, out_dim)  # f是一个向量
+        u_true_filepanp = 'dataMat2pLaplace/E10/' + str('u_true') + str(mesh_number) + str('.mat')
+        u_true = true_solution2E10(input_dim, out_dim, q=mesh_number, file_name=u_true_filepanp)
+        u_left, u_right, u_bottom, u_top = boundary2E10(input_dim, out_dim, intervalL, intervalR)
+        # A_eps要作用在u的每一个网格点值，所以A_eps在每一个网格点都要求值，和u类似
+        A_eps = elliptic_coef2E10(input_dim, out_dim)
 
     return u_true, f, A_eps, u_left, u_right, u_bottom, u_top
 
@@ -498,7 +578,7 @@ def get_force_side2multi_scale3D(x=None, y=None, z=None):
 
 def get_force2multi_scale3D_E5(x=None, y=None, z=None):
     u_true = 10*(x-x*x)*(y-y*y)*(z-z*z)+0.1*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
-    A_eps = 0.5 + 0.5 * torch.cos(5 * torch.pi * x)*torch.cos(20 * torch.pi * y)*torch.cos(10 * torch.pi * z)
+    A_eps = 1.0 + 0.5 * torch.cos(5 * torch.pi * x)*torch.cos(20 * torch.pi * y)*torch.cos(10 * torch.pi * z)
 
     Ax = -2.5*torch.pi*torch.sin(5*torch.pi*x)*torch.cos(20 * torch.pi * y)*torch.cos(10 * torch.pi * z)
     Ay = -10*torch.pi*torch.cos(5*torch.pi*x)*torch.sin(20 * torch.pi * y)*torch.cos(10 * torch.pi * z)
@@ -514,6 +594,191 @@ def get_force2multi_scale3D_E5(x=None, y=None, z=None):
 
     uxxAdduyyAdduzz = uxx+uyy+uzz
     f = -(Ax*ux + Ay*uy + Az*uz) - A_eps*uxxAdduyyAdduzz
+    return f
+
+
+def get_infos2MS_Laplace3D_E6(eps=0.1):
+    fside = lambda x, y, z: torch.ones_like(x)
+    u_true = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    A_eps = lambda x, y, z: 2 + torch.cos(2*torch.pi*x/eps)*torch.cos(2*torch.pi*y/eps)*torch.cos(2*torch.pi*z/eps)
+    u_00 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_01 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_10 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_11 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_20 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_21 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    return u_true, fside, A_eps, u_00, u_01, u_10, u_11, u_20, u_21
+
+
+def get_force_side2MS_Laplace2E6_3D(x=None, y=None, z=None, eps=0.1):
+    u_true = 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    A_eps = 2.0 + torch.cos(2*torch.pi*x/eps)*torch.cos(2*torch.pi*y/eps)*torch.cos(2*torch.pi*z/eps)
+
+    Ax = -(2.0/eps)*torch.pi*torch.sin(2*torch.pi*x/eps)*torch.cos(2*torch.pi*y/eps)*torch.cos(2*torch.pi*z/eps)
+    Ay = -(2.0/eps)*torch.pi*torch.cos(2*torch.pi*x/eps)*torch.sin(2*torch.pi*y/eps)*torch.cos(2*torch.pi*z/eps)
+    Az = -(2.0/eps)*torch.pi*torch.cos(2*torch.pi*x/eps)*torch.cos(2*torch.pi*y/eps)*torch.sin(2*torch.pi*z/eps)
+
+    ux = 10.0*(1-2*x)*(y-y*y)*(z-z*z)
+    uy = 10.0*(x-x*x)*(1-2*y)*(z-z*z)
+    uz = 10.0*(x-x*x)*(y-y*y)*(1-2*z)
+
+    uxx = -20.0*(y-y*y)*(z-z*z)
+    uyy = -20.0*(x-x*x)*(z-z*z)
+    uzz = -20.0*(x-x*x)*(y-y*y)
+
+    uxxAdduyyAdduzz = uxx + uyy + uzz
+    f = -(Ax * ux + Ay * uy + Az * uz) - A_eps * uxxAdduyyAdduzz
+    return f
+
+
+def get_infos2MS_Laplace3D_E7(s=0.2, eps=0.1):
+    fside = lambda x, y, z: torch.ones_like(x)
+    u_true = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)+s*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    A_eps = lambda x, y, z: 2 + torch.cos(torch.pi*x/eps)*torch.cos(torch.pi*y/eps)*torch.cos(torch.pi*z/eps)
+    u_00 = lambda x, y, z: 10*(x-x*x)*(y-y*y)*(z-z*z)+s*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    u_01 = lambda x, y, z: 10*(x-x*x)*(y-y*y)*(z-z*z)+s*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    u_10 = lambda x, y, z: 10*(x-x*x)*(y-y*y)*(z-z*z)+s*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    u_11 = lambda x, y, z: 10*(x-x*x)*(y-y*y)*(z-z*z)+s*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    u_20 = lambda x, y, z: 10*(x-x*x)*(y-y*y)*(z-z*z)+s*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    u_21 = lambda x, y, z: 10*(x-x*x)*(y-y*y)*(z-z*z)+s*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    return u_true, fside, A_eps, u_00, u_01, u_10, u_11, u_20, u_21
+
+
+def get_force_side2MS_Laplace2E7_3D(x=None, y=None, z=None, s=0.2, eps=0.01):
+    u_true = 10.0*(x-x*x)*(y-y*y)*(z-z*z) + s*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    A_eps = 2 + torch.cos(torch.pi*x/eps)*torch.cos(torch.pi*y/eps)*torch.cos(torch.pi*z/eps)
+
+    Ax = -(1.0/eps)*torch.pi*torch.sin(torch.pi*x/eps)*torch.cos(torch.pi*y/eps)*torch.cos(torch.pi*z/eps)
+    Ay = -(1.0/eps)*torch.pi*torch.cos(torch.pi*x/eps)*torch.sin(torch.pi*y/eps)*torch.cos(torch.pi*z/eps)
+    Az = -(1.0/eps)*torch.pi*torch.cos(torch.pi*x/eps)*torch.cos(torch.pi*y/eps)*torch.sin(torch.pi*z/eps)
+
+    ux = 10*(1-2*x)*(y-y*y)*(z-z*z)+s*5*torch.pi*torch.cos(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    uy = 10*(x-x*x)*(1-2*y)*(z-z*z)+s*5*torch.pi*torch.sin(5*torch.pi*x)*torch.cos(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    uz = 10*(x-x*x)*(y-y*y)*(1-2*z)+s*5*torch.pi*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.cos(5*torch.pi*z)
+
+    uxx = -20*(y-y*y)*(z-z*z)-s*25*(torch.pi*torch.pi)*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    uyy = -20*(x-x*x)*(z-z*z)-s*25*(torch.pi*torch.pi)*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+    uzz = -20*(x-x*x)*(y-y*y)-s*25*(torch.pi*torch.pi)*torch.sin(5*torch.pi*x)*torch.sin(5*torch.pi*y)*torch.sin(5*torch.pi*z)
+
+    uxxAdduyyAdduzz = uxx + uyy + uzz
+    f = -(Ax * ux + Ay * uy + Az * uz) - A_eps * uxxAdduyyAdduzz
+    return f
+
+
+def get_infos2MS_Laplace3D_E8(eps=0.01):
+    fside = lambda x, y, z: torch.ones_like(x)
+    u_true = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    A_eps = lambda x, y, z: 2 + torch.sin(torch.pi*x/eps)*torch.sin(torch.pi*y/eps)*torch.sin(torch.pi*z/eps)
+    u_00 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_01 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_10 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_11 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_20 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_21 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    return u_true, fside, A_eps, u_00, u_01, u_10, u_11, u_20, u_21
+
+
+def get_force_side2MS_Laplace2E8_3D(x=None, y=None, z=None, eps=0.01):
+    u_true = 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    A_eps = 2.0 + torch.sin(torch.pi*x/eps)*torch.sin(torch.pi*y/eps)*torch.sin(torch.pi*z/eps)
+
+    Ax = (1.0/eps)*torch.pi*torch.cos(torch.pi*x/eps)*torch.sin(torch.pi*y/eps)*torch.sin(torch.pi*z/eps)
+    Ay = (1.0/eps)*torch.pi*torch.sin(torch.pi*x/eps)*torch.cos(torch.pi*y/eps)*torch.sin(torch.pi*z/eps)
+    Az = (1.0/eps)*torch.pi*torch.sin(torch.pi*x/eps)*torch.sin(torch.pi*y/eps)*torch.cos(torch.pi*z/eps)
+
+    ux = 10.0*(1-2*x)*(y-y*y)*(z-z*z)
+    uy = 10.0*(x-x*x)*(1-2*y)*(z-z*z)
+    uz = 10.0*(x-x*x)*(y-y*y)*(1-2*z)
+
+    uxx = -20.0*(y-y*y)*(z-z*z)
+    uyy = -20.0*(x-x*x)*(z-z*z)
+    uzz = -20.0*(x-x*x)*(y-y*y)
+
+    uxxAdduyyAdduzz = uxx + uyy + uzz
+    f = -(Ax * ux + Ay * uy + Az * uz) - A_eps * uxxAdduyyAdduzz
+    return f
+
+
+def get_infos2MS_Laplace3D_E9(eps=0.01):
+    fside = lambda x, y, z: torch.ones_like(x)
+    u_true = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    A_eps = lambda x, y, z: 2 + (1.5+torch.sin(2*torch.pi*x/eps))/(1.5+torch.cos(2*torch.pi*x/eps))+\
+                                (1.5+torch.sin(2*torch.pi*y/eps))/(1.5+torch.cos(2*torch.pi*y/eps))+\
+                                (1.5+torch.sin(2*torch.pi*z/eps))/(1.5+torch.cos(2*torch.pi*z/eps))
+    u_00 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_01 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_10 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_11 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_20 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    u_21 = lambda x, y, z: 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    return u_true, fside, A_eps, u_00, u_01, u_10, u_11, u_20, u_21
+
+
+def get_force_side2MS_Laplace2E9_3D(x=None, y=None, z=None, eps=0.1):
+    u_true = 10.0*(x-x*x)*(y-y*y)*(z-z*z)
+    A_eps = 2 + (1.5+torch.sin(2*torch.pi*x/eps))/(1.5+torch.cos(2*torch.pi*x/eps))+\
+                (1.5+torch.sin(2*torch.pi*y/eps))/(1.5+torch.cos(2*torch.pi*y/eps))+\
+                (1.5+torch.sin(2*torch.pi*z/eps))/(1.5+torch.cos(2*torch.pi*z/eps))
+
+    Ax = (2.0*torch.pi/eps)*torch.cos(2.0*torch.pi*x/eps)/(1.5+torch.cos(2*torch.pi*x/eps)) + \
+         (2.0*torch.pi/eps)*(1.5+torch.sin(2*torch.pi*x/eps))*torch.sin(2*torch.pi*x/eps)/((1.5+torch.cos(2*torch.pi*x/eps))*(1.5+torch.cos(2*torch.pi*x/eps)))
+    Ay = (2.0*torch.pi/eps)*torch.cos(2*torch.pi*y/eps)/(1.5+torch.cos(2*torch.pi*y/eps)) + \
+         (2.0*torch.pi/eps)*(1.5+torch.sin(2*torch.pi*y/eps))*torch.sin(2*torch.pi*y/eps)/((1.5+torch.cos(2*torch.pi*y/eps))*(1.5+torch.cos(2*torch.pi*y/eps)))
+    Az = (2.0*torch.pi/eps)*torch.cos(2*torch.pi*z/eps)/(1.5+torch.cos(2*torch.pi*z/eps)) + \
+         (2.0*torch.pi/eps)*(1.5+torch.sin(2*torch.pi*z/eps))*torch.sin(2*torch.pi*z/eps)/((1.5+torch.cos(2*torch.pi*z/eps))*(1.5+torch.cos(2*torch.pi*z/eps)))
+
+    ux = 10.0*(1-2*x)*(y-y*y)*(z-z*z)
+    uy = 10.0*(x-x*x)*(1-2*y)*(z-z*z)
+    uz = 10.0*(x-x*x)*(y-y*y)*(1-2*z)
+
+    uxx = -20.0*(y-y*y)*(z-z*z)
+    uyy = -20.0*(x-x*x)*(z-z*z)
+    uzz = -20.0*(x-x*x)*(y-y*y)
+
+    uxxAdduyyAdduzz = uxx + uyy + uzz
+    f = -(Ax * ux + Ay * uy + Az * uz) - A_eps * uxxAdduyyAdduzz
+    return f
+
+
+def get_infos2MS_Laplace3D_E10(eps=0.1):
+    fside = lambda x, y, z: 20*torch.ones_like(x)
+    # u_true = np.load('dataMat2pLaplace/exam8/solution_0.500.npz')['u']
+    u_true = lambda x, y, z: torch.zeros_like(x)
+    A_eps = lambda x, y, z: 2 + torch.sin(2*torch.pi*x/eps)*torch.sin(2*torch.pi*y/eps)*torch.sin(2*torch.pi*z/eps)
+    u_00 = lambda x, y, z: torch.zeros_like(x)
+    u_01 = lambda x, y, z: torch.zeros_like(x)
+    u_10 = lambda x, y, z: torch.zeros_like(x)
+    u_11 = lambda x, y, z: torch.zeros_like(x)
+    u_20 = lambda x, y, z: torch.zeros_like(x)
+    u_21 = lambda x, y, z: torch.zeros_like(x)
+    return u_true, fside, A_eps, u_00, u_01, u_10, u_11, u_20, u_21
+
+
+def get_force_side2MS_Laplace2E10_3D(x=None, y=None, z=None, eps=0.1):
+    u_true = 5.0*(x-x*x)*(y-y*y)*(z-z*z)
+    A_eps = 2 + (1.5+torch.sin(2*torch.pi*x/eps))/(1.5+torch.sin(2*torch.pi*y/eps)) + \
+            (1.5+torch.sin(2*torch.pi*z/eps))/(1.5+torch.sin(2*torch.pi*z/eps)) + x*y*z
+
+    Ax = (2.0*torch.pi/eps)*torch.cos(2.0*torch.pi*(x+y+z)/eps)/(1.5+torch.cos(2*torch.pi*(x+y+z)/eps)) + \
+         (2.0*torch.pi/eps)*(1.5+torch.sin(2*torch.pi*(x+y+z)/eps))*torch.sin(2*torch.pi*(x+y+z)/eps)/\
+         ((1.5+torch.cos(2*torch.pi*(x+y+z)/eps))*(1.5+torch.cos(2*torch.pi*(x+y+z)/eps)))
+    Ay = (2.0*torch.pi/eps)*torch.cos(2.0*torch.pi*(x+y+z)/eps)/(1.5+torch.cos(2*torch.pi*(x+y+z)/eps)) + \
+         (2.0*torch.pi/eps)*(1.5+torch.sin(2*torch.pi*(x+y+z)/eps))*torch.sin(2*torch.pi*(x+y+z)/eps)/\
+         ((1.5+torch.cos(2*torch.pi*(x+y+z)/eps))*(1.5+torch.cos(2*torch.pi*(x+y+z)/eps)))
+    Az = (2.0*torch.pi/eps)*torch.cos(2.0*torch.pi*(x+y+z)/eps)/(1.5+torch.cos(2*torch.pi*(x+y+z)/eps)) + \
+         (2.0*torch.pi/eps)*(1.5+torch.sin(2*torch.pi*(x+y+z)/eps))*torch.sin(2*torch.pi*(x+y+z)/eps)/\
+         ((1.5+torch.cos(2*torch.pi*(x+y+z)/eps))*(1.5+torch.cos(2*torch.pi*(x+y+z)/eps)))
+
+    ux = 5.0*(1-2*x)*(y-y*y)*(z-z*z)
+    uy = 5.0*(x-x*x)*(1-2*y)*(z-z*z)
+    uz = 5.0*(x-x*x)*(y-y*y)*(1-2*z)
+
+    uxx = -10.0*(y-y*y)*(z-z*z)
+    uyy = -10.0*(x-x*x)*(z-z*z)
+    uzz = -10.0*(x-x*x)*(y-y*y)
+
+    uxxAdduyyAdduzz = uxx + uyy + uzz
+    f = -(Ax * ux + Ay * uy + Az * uz) - A_eps * uxxAdduyyAdduzz
     return f
 
 
@@ -560,10 +825,10 @@ def get_infos2pLaplace_4D(input_dim=1, out_dim=1, mesh_number=2, intervalL=0.0, 
 def get_force2pLaplace_4D(x=None, y=None, z=None, s=None, equa_name=None):
     if equa_name == 'multi_scale4D_2':
         A = 0.25*(1.0 + np.cos(5.0*np.pi * x)*np.cos(10.0*np.pi*y) * np.cos(10.0 *np.pi*z) * np.cos(5.0*np.pi * s))
-        Ax = -0.25 *5.0*np.pi*np.sin(5.0*np.pi*x)*np.cos(10.0*np.pi*y)*np.cos(10.0*np.pi*z) * np.cos(5.0*np.pi*s)
+        Ax = -0.25*5.0*np.pi*np.sin(5.0*np.pi*x)*np.cos(10.0*np.pi*y)*np.cos(10.0*np.pi*z) * np.cos(5.0*np.pi*s)
         Ay = -0.25*10.0*np.pi*np.cos(5.0*np.pi*x)*np.sin(10.0*np.pi*y)*np.cos(10.0*np.pi*z) * np.cos(5.0* np.pi * s)
         Az = -0.25*10.0*np.pi*np.cos(5.0*np.pi*x)*np.cos(10.0*np.pi*y)*np.sin(10.0*np.pi*z) * np.cos(5.0* np.pi * s)
-        As = -0.25 *5.0*np.pi*np.cos(5.0*np.pi*x)*np.cos(10.0*np.pi*y)*np.cos(10.0*np.pi*z) * np.sin(5.0* np.pi * s)
+        As = -0.25*5.0*np.pi*np.cos(5.0*np.pi*x)*np.cos(10.0*np.pi*y)*np.cos(10.0*np.pi*z) * np.sin(5.0* np.pi * s)
         U = np.sin(5.0*np.pi*x)*np.sin(10.0*np.pi*y)*np.sin(10.0*np.pi*z)*np.sin(5.0*np.pi*s)
         Ux = 5*np.pi * np.cos(5 * np.pi * x) * np.sin(10 * np.pi * y) * np.sin(10 * np.pi * z) * np.sin(5 * np.pi * s)
         Uy = 10*np.pi* np.sin(5 * np.pi * x) * np.cos(10 * np.pi * y) * np.sin(10 * np.pi * z) * np.sin(5 * np.pi * s)

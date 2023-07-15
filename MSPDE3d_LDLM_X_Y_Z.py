@@ -315,7 +315,7 @@ class MscaleDNN(tn.Module):
         shffule_U = U[disorder_index2data, :]
         return shffule_XYZ, shffule_U
 
-    def load_test_data2mat(self, eps=0.1, z_slice=0.5, with_gpu=True):
+    def load_test_data2mat(self, eps=0.1, index2z_slice=20, with_gpu=True):
         # Example 10 的参考解，FDM计算得到的
         assert eps == 0.1
         data_path2refer_solu = 'dataMat2pLaplace/exam8/uref64.mat'
@@ -323,24 +323,24 @@ class MscaleDNN(tn.Module):
         Uref = data2solu['u']
         Uref = Uref.astype(np.float32)
 
-
         if with_gpu:
             torch_Uref = torch.from_numpy(Uref)
             u_ref = torch_Uref.to(self.opt2device)
 
-        U_downsample = u_ref[:, :, 32]
+        U_downsample = u_ref[:, :, index2z_slice]
 
         fileName2test_index = 'dataMat2pLaplace/exam8/' + 'disorder_index' + str(65) + str('.mat')
         data2indexes = Load_data2Mat.load_Matlab_data(fileName2test_index)
         disorder_index2data = np.reshape(data2indexes['disorder_index'], newshape=(-1))
 
         coords = torch.linspace(0, 1, 65)
+        z_slice = coords[index2z_slice]
         meshX, meshY = torch.meshgrid(coords, coords)
         x, y = meshX.reshape(-1, 1), meshY.reshape(-1, 1)
         z = z_slice * torch.ones_like(x)
         torch_XYZ = torch.cat([x, y, z], dim=-1)
         if with_gpu:
-            XYZ=torch_XYZ.to(self.opt2device)
+            XYZ = torch_XYZ.to(self.opt2device)
 
         U = U_downsample.reshape(-1, 1)
         shffule_XYZ = XYZ[disorder_index2data, :]
@@ -460,7 +460,7 @@ def solve_Multiscale_PDE(R):
         #                     torch.reshape(test_xyz_torch[:, 2], shape=[-1, 1]))
         # test_xyz_torch, Utrue2test = model.load_test_solu_XYZ(eps=R['epsilon'], z_slice=0.5, with_gpu=R['use_gpu'])
         # test_xyz_torch, Utrue2test = model.load_test_data_low_res(eps=R['epsilon'], z_slice=0.5, with_gpu=R['use_gpu'])
-        test_xyz_torch, Utrue2test = model.load_test_data2mat(eps=R['epsilon'], z_slice=0.5, with_gpu=R['use_gpu'])
+        test_xyz_torch, Utrue2test = model.load_test_data2mat(eps=R['epsilon'], index2z_slice=20, with_gpu=R['use_gpu'])
         size2test = 65
 
     if True == R['use_gpu']:

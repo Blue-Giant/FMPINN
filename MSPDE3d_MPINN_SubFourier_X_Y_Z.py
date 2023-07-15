@@ -184,6 +184,19 @@ class MscaleDNN(tn.Module):
         return UNN, loss2func
 
     def loss2bd(self, XYZ_bd=None, Ubd_exact=None, if_lambda2Ubd=True, loss_type='L2_loss', scale2lncosh=0.1):
+        """
+        Calculating the loss of Laplace equation (*) on the boundary points for given boundary
+        -Laplace U = f,  in Omega
+        U = g            on Partial Omega
+        Args:
+            XYZ_bd:        the input data of variable. ------  float, shape=[B,D]
+            Ubd_exact:     the exact function or array for boundary condition
+            if_lambda2Ubd: the Ubd_exact is a lambda function or an array  ------ Bool
+            loss_type:     the type of loss function(Ritz, L2, Lncosh)      ------ string
+            scale2lncosh:  if the loss is lncosh, using it                  ------- float
+        return:
+            loss_bd: the output loss on the boundary points for given boundary
+        """
         assert (XYZ_bd is not None)
         assert (Ubd_exact is not None)
 
@@ -235,6 +248,115 @@ class MscaleDNN(tn.Module):
         UNN = self.DNN(XYZ_points, scale=self.factor2freq, sFourier=self.sFourier)
         return UNN
 
+    def load_test_solu_XYZ(self, eps=0.5, z_slice=0.5, path2dis_orders=None, with_gpu=True):
+        if eps == 0.1:
+            data_path2refer_solu = 'dataMat2pLaplace/exam8/solution_0.100.npz'
+        elif eps == 0.5:
+            data_path2refer_solu = 'dataMat2pLaplace/exam8/solution_0.500.npz'
+        elif eps == 0.05:
+            data_path2refer_solu = 'dataMat2pLaplace/exam8/solution_0.050.npz'
+        if os.path.exists(data_path2refer_solu):
+            u_ref = np.load(data_path2refer_solu)['u']
+        else:
+            raise ValueError("Generate the reference solution, i.e., the SRBF solution at eps=0.05")
+
+        if with_gpu:
+            torch_Uref = torch.from_numpy(u_ref)
+            u_ref = torch_Uref.to(self.opt2device)
+
+        U_z0p5 = u_ref[:, :, 50]
+
+        fileName2test_index = 'dataMat2pLaplace/exam8/' + 'disorder_index' + str(101) + str('.mat')
+        data2indexes = Load_data2Mat.load_Matlab_data(fileName2test_index)
+        disorder_index2data = np.reshape(data2indexes['disorder_index'], newshape=(-1))
+
+        coords = torch.linspace(0, 1, 101)
+        x, y = torch.meshgrid(coords, coords)
+        x, y = x.reshape(-1, 1), y.reshape(-1, 1)
+        z = z_slice * torch.ones_like(x)
+        torch_XYZ = torch.cat([x, y, z], dim=-1)
+        if with_gpu:
+            XYZ=torch_XYZ.to(self.opt2device)
+
+        U = U_z0p5.reshape(-1, 1)
+        shffule_XYZ = XYZ[disorder_index2data, :]
+        shffule_U = U[disorder_index2data, :]
+        return shffule_XYZ, shffule_U
+
+    def load_test_data_low_res(self, eps=0.5, z_slice=0.5, path2dis_orders=None, with_gpu=True):
+        # Example 10 的参考解，并不是FDM或者FEM计算得到的
+        if eps == 0.1:
+            data_path2refer_solu = 'dataMat2pLaplace/exam8/solution_0.100.npz'
+        elif eps == 0.5:
+            data_path2refer_solu = 'dataMat2pLaplace/exam8/solution_0.500.npz'
+        elif eps == 0.05:
+            data_path2refer_solu = 'dataMat2pLaplace/exam8/solution_0.050.npz'
+        if os.path.exists(data_path2refer_solu):
+            Uref = np.load(data_path2refer_solu)['u']
+        else:
+            raise ValueError("Generate the reference solution, i.e., the SRBF solution at eps=0.05")
+        # index2slice = np.arange(start=0, stop=101, step=2)
+        # u_ref = Uref[0:2:100, 0:2:100, 0:2:100]
+        # u_ref = Uref[index2slice, [index2slice], [index2slice]]
+        # u_ref = Uref[::2, ::2, ::2]
+        if with_gpu:
+            torch_Uref = torch.from_numpy(Uref)
+            u_ref = torch_Uref.to(self.opt2device)
+
+        # U_z0p5 = u_ref[::2, ::2, ::2]
+        U_z0p5 = u_ref[::4, ::4, ::4]
+
+        fileName2test_index = 'dataMat2pLaplace/exam8/' + 'disorder_index' + str(26) + str('.mat')
+        data2indexes = Load_data2Mat.load_Matlab_data(fileName2test_index)
+        disorder_index2data = np.reshape(data2indexes['disorder_index'], newshape=(-1))
+
+        coords = torch.linspace(0, 1, 101)
+        meshX, meshY, meshZ = torch.meshgrid(coords, coords, coords)
+        x = meshX[::4, ::4, ::4]
+        y = meshY[::4, ::4, ::4]
+        z = meshZ[::4, ::4, ::4]
+        x, y, z = x.reshape(-1, 1), y.reshape(-1, 1), z.reshape(-1, 1)
+        torch_XYZ = torch.cat([x, y, z], dim=-1)
+        if with_gpu:
+            XYZ=torch_XYZ.to(self.opt2device)
+
+        U = U_z0p5.reshape(-1, 1)
+        shffule_XYZ = XYZ[disorder_index2data, :]
+        shffule_U = U[disorder_index2data, :]
+        return shffule_XYZ, shffule_U
+
+    def load_test_data2mat(self, eps=0.1, index2z_slice=20, with_gpu=True):
+        # Example 10 的参考解，FDM计算得到的
+        assert eps == 0.1
+        data_path2refer_solu = 'dataMat2pLaplace/exam8/uref64.mat'
+        data2solu = Load_data2Mat.load_Matlab_data(filename=data_path2refer_solu)
+        Uref = data2solu['u']
+        Uref = Uref.astype(np.float32)
+
+        if with_gpu:
+            torch_Uref = torch.from_numpy(Uref)
+            u_ref = torch_Uref.to(self.opt2device)
+
+        U_downsample = u_ref[:, :, index2z_slice]
+
+        fileName2test_index = 'dataMat2pLaplace/exam8/' + 'disorder_index' + str(65) + str('.mat')
+        data2indexes = Load_data2Mat.load_Matlab_data(fileName2test_index)
+        disorder_index2data = np.reshape(data2indexes['disorder_index'], newshape=(-1))
+
+        coords = torch.linspace(0, 1, 65)
+        z_slice = coords[index2z_slice]
+        meshX, meshY = torch.meshgrid(coords, coords)
+        x, y = meshX.reshape(-1, 1), meshY.reshape(-1, 1)
+        z = z_slice * torch.ones_like(x)
+        torch_XYZ = torch.cat([x, y, z], dim=-1)
+        if with_gpu:
+            XYZ = torch_XYZ.to(self.opt2device)
+
+        U = U_downsample.reshape(-1, 1)
+        shffule_XYZ = XYZ[disorder_index2data, :]
+        shffule_U = U[disorder_index2data, :]
+        return shffule_XYZ, shffule_U
+
 
 def solve_Multiscale_PDE(R):
     log_out_path = R['FolderName']        # 将路径从字典 R 中提取出来
@@ -259,8 +381,8 @@ def solve_Multiscale_PDE(R):
     # -laplace u = f
     region_lb = 0.0
     region_rt = 1.0
-    u_true, f, A_eps, u_left, u_right, u_front, u_behind, u_bottom, u_top = MS_LaplaceEqs.get_infos2pLaplace_3D(
-        input_dim=input_dim, out_dim=out_dim, intervalL=region_lb, intervalR=region_rt, equa_name=R['equa_name'])
+    u_true, f, A_eps, u_left, u_right, u_front, u_behind, u_bottom, u_top = MS_LaplaceEqs.get_infos2MS_Laplace3D_E10(
+        eps=R['epsilon'])
 
     model = MscaleDNN(input_dim=R['input_dim'], out_dim=R['output_dim'], hidden_layer=R['hidden_layers'],
                       Model_name=R['model2NN'], name2actIn=R['name2act_in'], name2actHidden=R['name2act_hidden'],
@@ -310,6 +432,9 @@ def solve_Multiscale_PDE(R):
         # size2test = 1000
         test_xyz_torch = dataUtilizer2torch.rand_it(test_bach_size, input_dim, region_a=region_lb, region_b=region_rt,
                                                     to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
+        Utrue2test = u_true(torch.reshape(test_xyz_torch[:, 0], shape=[-1, 1]),
+                            torch.reshape(test_xyz_torch[:, 1], shape=[-1, 1]),
+                            torch.reshape(test_xyz_torch[:, 2], shape=[-1, 1]))
     elif R['testData_model'] == 'loadData':
         test_bach_size = 1600
         size2test = 40
@@ -323,6 +448,9 @@ def solve_Multiscale_PDE(R):
                                                           use_grad2x=False)
         shape2xyz = test_xyz_torch.shape
         size2test = int(np.sqrt(shape2xyz[0]))
+        Utrue2test = u_true(torch.reshape(test_xyz_torch[:, 0], shape=[-1, 1]),
+                            torch.reshape(test_xyz_torch[:, 1], shape=[-1, 1]),
+                            torch.reshape(test_xyz_torch[:, 2], shape=[-1, 1]))
     elif R['testData_model'] == 'loadData2Fixed_Y':
         mat_data_path = 'dataMat_highDim/ThreeD2Fixed_Y'
         test_xyz_torch = Load_data2Mat.get_randomData2mat(dim=input_dim, data_path=mat_data_path, to_torch=True,
@@ -330,13 +458,23 @@ def solve_Multiscale_PDE(R):
                                                           use_grad2x=False)
         shape2xyz = test_xyz_torch.shape
         size2test = int(np.sqrt(shape2xyz[0]))
+        Utrue2test = u_true(torch.reshape(test_xyz_torch[:, 0], shape=[-1, 1]),
+                            torch.reshape(test_xyz_torch[:, 1], shape=[-1, 1]),
+                            torch.reshape(test_xyz_torch[:, 2], shape=[-1, 1]))
     elif R['testData_model'] == 'loadData2Fixed_Z':
-        mat_data_path = 'dataMat_highDim/ThreeD2Fixed_Z'
-        test_xyz_torch = Load_data2Mat.get_randomData2mat(dim=input_dim, data_path=mat_data_path, to_torch=True,
-                                                          to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'],
-                                                          use_grad2x=False)
-        shape2xyz = test_xyz_torch.shape
-        size2test = int(np.sqrt(shape2xyz[0]))
+        # mat_data_path = 'dataMat_highDim/ThreeD2Fixed_Z'
+        # test_xyz_torch = Load_data2Mat.get_randomData2mat(dim=input_dim, data_path=mat_data_path, to_torch=True,
+        #                                                   to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'],
+        #                                                   use_grad2x=False)
+        # shape2xyz = test_xyz_torch.shape
+        # size2test = int(np.sqrt(shape2xyz[0]))
+        #
+        # Utrue2test = u_true(torch.reshape(test_xyz_torch[:, 0], shape=[-1, 1]),
+        #                     torch.reshape(test_xyz_torch[:, 1], shape=[-1, 1]),
+        #                     torch.reshape(test_xyz_torch[:, 2], shape=[-1, 1]))
+        # test_xyz_torch, Utrue2test = model.load_test_solu_XYZ(eps=R['epsilon'], z_slice=0.5, with_gpu=R['use_gpu'])
+        # test_xyz_torch, Utrue2test = model.load_test_data_low_res(eps=R['epsilon'], z_slice=0.5, with_gpu=R['use_gpu'])
+        test_xyz_torch, Utrue2test = model.load_test_data2mat(eps=R['epsilon'], index2z_slice=20, with_gpu=R['use_gpu'])
 
     if True == R['use_gpu']:
         numpy_test_xyz = test_xyz_torch.cpu().detach().numpy()
@@ -344,10 +482,6 @@ def solve_Multiscale_PDE(R):
     else:
         numpy_test_xyz = test_xyz_torch.detach().numpy()
         saveData.save_testData_or_solus2mat(numpy_test_xyz, dataName='testXYZ', outPath=R['FolderName'])
-
-    Utrue2test = u_true(torch.reshape(test_xyz_torch[:, 0], shape=[-1, 1]),
-                        torch.reshape(test_xyz_torch[:, 1], shape=[-1, 1]),
-                        torch.reshape(test_xyz_torch[:, 2], shape=[-1, 1]))
 
     for i_epoch in range(R['max_epoch'] + 1):
         x_it_batch = dataUtilizer2torch.rand_it_lhs(
@@ -379,20 +513,9 @@ def solve_Multiscale_PDE(R):
         else:
             temp_penalty_bd = bd_penalty_init
 
-        if R['equa_name'] == 'multi_scale3D_4':
-            force_side = MS_LaplaceEqs.get_force_side2multi_scale3D(x=x_it_batch, y=y_it_batch, z=z_it_batch)
-            UNN2train, loss_it = model.loss_in2pLaplace(
-                X=x_it_batch, Y=y_it_batch, Z=z_it_batch, fside=force_side, if_lambda2fside=False, aeps=A_eps,
-                if_lambda2aeps=True, loss_type=R['loss_type'], scale2lncosh=R['scale2lncosh'])
-        elif R['equa_name'] == 'multi_scale3D_5':
-            force_side = MS_LaplaceEqs.get_force2multi_scale3D_E5(x=x_it_batch, y=y_it_batch, z=z_it_batch)
-            UNN2train, loss_it = model.loss_in2pLaplace(
-                X=x_it_batch, Y=y_it_batch, Z=z_it_batch, fside=force_side, if_lambda2fside=False, aeps=A_eps,
-                if_lambda2aeps=True, loss_type=R['loss_type'], scale2lncosh=R['scale2lncosh'])
-        else:
-            UNN2train, loss_it = model.loss_in2pLaplace(
-                X=x_it_batch, Y=y_it_batch, Z=z_it_batch, fside=f, if_lambda2fside=True, aeps=A_eps,
-                if_lambda2aeps=True, loss_type=R['loss_type'], scale2lncosh=R['scale2lncosh'])
+        UNN2train, loss_it = model.loss_in2pLaplace(
+            X=x_it_batch, Y=y_it_batch, Z=z_it_batch, fside=f, if_lambda2fside=True, aeps=A_eps,
+            if_lambda2aeps=True, loss_type=R['loss_type'], scale2lncosh=R['scale2lncosh'])
 
         loss_bd2left = model.loss2bd(XYZ_bd=xyz_left_batch, Ubd_exact=u_left,
                                      loss_type=R['loss_type2bd'], scale2lncosh=R['scale2lncosh'])
@@ -422,11 +545,15 @@ def solve_Multiscale_PDE(R):
         optimizer.step()                      # 更新参数Ws和Bs
         scheduler.step()
 
-        Uexact2train = u_true(torch.reshape(x_it_batch, shape=[-1, 1]),
-                              torch.reshape(y_it_batch, shape=[-1, 1]),
-                              torch.reshape(z_it_batch, shape=[-1, 1]))
-        train_mse = torch.mean(torch.square(UNN2train - Uexact2train))
-        train_rel = train_mse / torch.mean(torch.square(Uexact2train))
+        if R['equa_name'] == 'multi_scale3D_10':
+            train_mse = torch.tensor([0], dtype=torch.float32)
+            train_rel = torch.tensor([0], dtype=torch.float32)
+        else:
+            Uexact2train = u_true(torch.reshape(x_it_batch, shape=[-1, 1]),
+                                  torch.reshape(y_it_batch, shape=[-1, 1]),
+                                  torch.reshape(z_it_batch, shape=[-1, 1]))
+            train_mse = torch.mean(torch.square(UNN2train - Uexact2train))
+            train_rel = train_mse / torch.mean(torch.square(Uexact2train))
 
         train_mse_all.append(train_mse.item())
         train_rel_all.append(train_rel.item())
@@ -507,7 +634,7 @@ if __name__ == "__main__":
 
     # 文件保存路径设置
     # store_file = 'Laplace3D'
-    store_file = 'MPINN3D'
+    store_file = 'MPINN3D_X_Y_Z'
     # store_file = 'Boltzmann3D'
     # store_file = 'Convection3D'
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -549,10 +676,16 @@ if __name__ == "__main__":
     # R['equa_name'] = 'multi_scale3D_1'
     # R['equa_name'] = 'multi_scale3D_2'
     # R['equa_name'] = 'multi_scale3D_3'
-    R['equa_name'] = 'multi_scale3D_4'
+    # R['equa_name'] = 'multi_scale3D_4'
+    # R['equa_name'] = 'multi_scale3D_5'
+    # R['equa_name'] = 'multi_scale3D_6'
+    # R['equa_name'] = 'multi_scale3D_7'
+    # R['equa_name'] = 'multi_scale3D_8'
+    # R['equa_name'] = 'multi_scale3D_9'
+    R['equa_name'] = 'multi_scale3D_10'
 
     R['mesh_number'] = 1
-    R['epsilon'] = 0.1
+    R['epsilon'] = 0.5
     R['order2pLaplace_operator'] = 2
     R['batch_size2interior'] = 7500  # 内部训练数据的批大小
     R['batch_size2boundary'] = 1000
@@ -560,9 +693,9 @@ if __name__ == "__main__":
     # ---------------------------- Setup of DNN -------------------------------
     # 装载测试数据模式
     # R['testData_model'] = 'loadRandomData'
-    R['testData_model'] = 'loadData2Fixed_X'
+    # R['testData_model'] = 'loadData2Fixed_X'
     # R['testData_model'] = 'loadData2Fixed_Y'
-    # R['testData_model'] = 'loadData2Fixed_Z'
+    R['testData_model'] = 'loadData2Fixed_Z'
     # R['testData_model'] = 'random_generate'
 
     R['loss_type'] = 'L2_loss'                        # loss类型:L2 loss
@@ -615,27 +748,6 @@ if __name__ == "__main__":
     # R['model2NN'] = 'Wavelet_DNN'
 
     # &&&&&&&&&&&&&&&&&&&&&& 隐藏层的层数和每层神经元数目 &&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # R['hidden_layers'] = (5, 8, 6, 6, 4)
-    # R['freq'] = np.arange(1, 51)
-
-    # R['hidden_layers'] = (5, 10, 6, 6, 5)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (5, 12, 8, 8, 6)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (10, 15, 8, 8, 6)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (15, 20, 10, 10, 6)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (20, 40, 30, 30, 15)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (40, 60, 40, 40, 20)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
     R['hidden_layers'] = (40, 60, 40, 40, 40)
     # R['hidden_layers'] = (50, 80, 50, 50, 50)
     # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)

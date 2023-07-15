@@ -273,7 +273,7 @@ def solve_Multiscale_PDE(R):
             region_rt = 1.0
         u_true, f, A_eps, u_left, u_right, u_bottom, u_top = MS_LaplaceEqs.get_infos2pLaplace_2D(
             input_dim=input_dim, out_dim=out_dim, mesh_number=R['mesh_number'], pow_order2Aeps=R['order2Aeps_MSE4'],
-            intervalL=0.0, intervalR=1.0, equa_name=R['equa_name'])
+            intervalL=-1.0, intervalR=1.0, equa_name=R['equa_name'])
     elif R['PDE_type'] == 'pLaplace_explicit':
         p_index = R['order2pLaplace_operator']
         epsilon = R['epsilon']
@@ -578,9 +578,11 @@ if __name__ == "__main__":
     # R['equa_name'] = 'multi_scale2D_1'      # p=2 区域为 [-1,1]X[-1,1]
     # R['equa_name'] = 'multi_scale2D_2'      # p=2 区域为 [-1,1]X[-1,1]
     # R['equa_name'] = 'multi_scale2D_3'      # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
-    R['equa_name'] = 'multi_scale2D_4'        # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
+    # R['equa_name'] = 'multi_scale2D_4'        # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
     # R['equa_name'] = 'multi_scale2D_5'      # p=3 区域为 [0,1]X[0,1]   和例三的系数A一样
     # R['equa_name'] = 'multi_scale2D_6'      # p=3 区域为 [-1,1]X[-1,1] 和例三的系数A一样
+    # R['equa_name'] = 'multi_scale2D_9'  # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
+    R['equa_name'] = 'multi_scale2D_10'  # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
 
     # R['PDE_type'] = 'pLaplace_explicit'
     # R['equa_name'] = 'multi_scale2D_7'      # p=2 区域为 [0,1]X[0,1]
@@ -669,37 +671,16 @@ if __name__ == "__main__":
     # R['init_boundary_penalty'] = 100                    # Regularization parameter for boundary conditions
     R['init_boundary_penalty'] = 10                       # Regularization parameter for boundary conditions
 
-    # R['gradient_penalty'] = 5       # 这个因子最好                     # Regularization parameter for boundary conditions
-    R['gradient_penalty'] = 10       # 这个因子最好                     # Regularization parameter for boundary conditions
-    # R['gradient_penalty'] = 15      # 这个因子最好                     # Regularization parameter for boundary conditions
-    # R['gradient_penalty'] = 20  # Regularization parameter for boundary conditions
-    # R['gradient_penalty'] = 25  # Regularization parameter for boundary conditions
+    # R['gradient_penalty'] = 5                           # Regularization parameter for boundary conditions
+    R['gradient_penalty'] = 10                            # Regularization parameter for boundary conditions
+    # R['gradient_penalty'] = 15                          # Regularization parameter for boundary conditions
+    # R['gradient_penalty'] = 20                          # Regularization parameter for boundary conditions
+    # R['gradient_penalty'] = 25                          # Regularization parameter for boundary conditions
 
     # &&&&&&&&&&&&&&&&&&& 使用的网络模型 &&&&&&&&&&&&&&&&&&&&&&&&&&&
     R['model2NN'] = 'Fourier_SubDNN'
 
     # &&&&&&&&&&&&&& 隐藏层的层数和每层神经元数目 网络的频率范围设置&&&&&&&&&&&&&&&&&&&&&&&
-    # R['hidden_layers'] = (5, 8, 6, 6, 4)
-    # R['freq'] = np.arange(1, 51)
-
-    # R['hidden_layers'] = (5, 10, 6, 6, 5)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (5, 12, 8, 8, 6)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (10, 15, 8, 8, 6)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (15, 20, 10, 10, 6)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (20, 40, 30, 30, 15)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
-    # R['hidden_layers'] = (40, 60, 40, 40, 20)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-
     # R['hidden_layers'] = (50, 80, 60, 60, 40)
     # R['hidden_layers'] = (50, 80, 60, 60, 30)
     # R['hidden_layers'] = (40, 60, 40, 40, 30)

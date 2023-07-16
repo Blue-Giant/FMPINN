@@ -14,9 +14,7 @@ Deep neural networks have received widespread attention due to their simplicity 
 
 # Remarks
 
-## 1.The MSPDE2d_FMPINN_TensorForm is faster than MSPDE2d_FMPINN_TensorForm_X_Y, 
-but the performance of MSPDE2d_FMPINN_TensorForm_X_Y is superior to that of 
-MSPDE2d_FMPINN_TensorForm
+## 1.The MSPDE2d_FMPINN_TensorForm is faster than MSPDE2d_FMPINN_TensorForm_X_Y, but the performance of MSPDE2d_FMPINN_TensorForm_X_Y is superior to that of MSPDE2d_FMPINN_TensorForm
 
 ## 2.The LHS sampler is better than Random sampler for interior and boundary.
 

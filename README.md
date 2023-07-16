@@ -30,7 +30,7 @@ MSPDE2d_FMPINN_TensorForm
 
 ## 3.For 2D problem, changing the penalty of loss for flux variable in MSPDE2d_FMPINN_TensorForm_X_Y, 
 
-10 --- 0.00751(secondly update 0.00351)
+10 --- 0.00351
 
 5----0.00651
 

@@ -26,12 +26,12 @@ from utilizers import plotData
 from utilizers import saveData
 
 
-class MscaleDNN(tn.Module):
+class FMPINN(tn.Module):
     def __init__(self, input_dim=4, out_dim=1, hidden_layer=None, Model_name='DNN', name2actIn='relu',
                  name2actHidden='relu', name2actOut='linear', opt2regular_WB='L2', type2numeric='float32',
                  factor2freq=None, sFourier=1.0, repeat_highFreq=True, use_gpu=False, No2GPU=0):
         """
-        initialing the class of MscaleDNN with given setups
+        initialing the class of FMPINN with given setups
         Args:
              input_dim:        the dimension of input data
              out_dim:          the dimension of output data
@@ -48,7 +48,7 @@ class MscaleDNN(tn.Module):
              use_gpu:          using cuda or not
              No2GPU:           if your computer have more than one GPU, please assign the number of GPU
         """
-        super(MscaleDNN, self).__init__()
+        super(FMPINN, self).__init__()
         self.DNN = DNN_base.Fourier_SubNets3D(
             indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
             actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
@@ -84,18 +84,21 @@ class MscaleDNN(tn.Module):
     def loss_in2pLaplace(self, X=None, fside=None, if_lambda2fside=True, aeps=None, if_lambda2aeps=True,
                          loss_type='ritz_loss', scale2lncosh=0.5):
         """
-        Calculating the loss of Laplace equation (*) in the interior points for given domain
-        -Laplace U = f,  in Omega
-        U = g            on Partial Omega
+        Calculating the loss of Laplace equation with p=2 in the interior points for given domain
+        -div(a·grad U) = f,   in Omega
+        BU = g                on Partial Omega, where B is a boundary operator, g is a given function
         Args:
-             X:               the input data of variable. ------  float, shape=[B,D]
+             XY:              the input data of variable. ------  float, shape=[B,D]
              fside:           the force side              ------  float, shape=[B,1]
              if_lambda2fside: the force-side is a lambda function or an array  ------ Bool
+             aeps:            the multi-scale coefficient       -----  float, shape=[B,1]
+             if_lambda2aeps:  the multi-scale coefficient is a lambda function or an array  ------ Bool
              loss_type:       the type of loss function(Ritz, L2, Lncosh)      ------ string
              scale2lncosh:    if the loss is lncosh, using it                  ------- float
         return:
              UNN:             the output data
-             loss_in:         the output loss in the interior points for given domain
+             loss2func:       the output loss in the interior points for given domain
+             loss2dAU:        the difference of divergence
         """
         assert (X is not None)
         assert (fside is not None)
@@ -152,9 +155,8 @@ class MscaleDNN(tn.Module):
 
     def loss2bd(self, X_bd=None, Ubd_exact=None, if_lambda2Ubd=True, loss_type='l2_loss', scale2lncosh=0.5):
         """
-        Calculating the loss of Laplace equation (*) on the boundary points for given boundary
-        -Laplace U = f,  in Omega
-        U = g            on Partial Omega
+        Calculating the loss of PDEs on the boundary points for given boundary
+        BU = g            on Partial Omega, where B is a boundary operator, g is a given function
         Args:
             X_bd:          the input data of variable. ------  float, shape=[B,D]
             Ubd_exact:     the exact function or array for boundary condition
@@ -199,9 +201,9 @@ class MscaleDNN(tn.Module):
         sum2WB = self.DNN.get_regular_sum2WB(regular_model=self.opt2regular_WB)
         return sum2WB
 
-    def evaluate_MscaleDNN(self, X_points=None):
+    def evaluate_FMPINN(self, X_points=None):
         """
-        Evaluating the MscaleDNN for testing points
+        Evaluating the FMPINN for testing points
         Args:
             X_points: the testing input data of variable. ------  float, shape=[B,D]
         return:
@@ -250,11 +252,11 @@ def solve_Multiscale_PDE(R):
             in_dim=R['input_dim'], out_dim=R['output_dim'], intervalL=region_l, intervalR=region_r,
             index2p=2, eps1=R['epsilon'], eps2=R['epsilon2'])
 
-    model = MscaleDNN(input_dim=R['input_dim'], out_dim=R['output_dim'], hidden_layer=R['hidden_layers'],
-                      Model_name=R['model2NN'], name2actIn=R['name2act_in'], name2actHidden=R['name2act_hidden'],
-                      name2actOut=R['name2act_out'], opt2regular_WB='L0', type2numeric='float32',
-                      factor2freq=R['freq'], sFourier=R['sfourier'], repeat_highFreq=R['repeat_High_freq'],
-                      use_gpu=R['use_gpu'], No2GPU=R['gpuNo'])
+    model = FMPINN(input_dim=R['input_dim'], out_dim=R['output_dim'], hidden_layer=R['hidden_layers'],
+                   Model_name=R['model2NN'], name2actIn=R['name2act_in'], name2actHidden=R['name2act_hidden'],
+                   name2actOut=R['name2act_out'], opt2regular_WB='L0', type2numeric='float32',
+                   factor2freq=R['freq'], sFourier=R['sfourier'], repeat_highFreq=R['repeat_High_freq'],
+                   use_gpu=R['use_gpu'], No2GPU=R['gpuNo'])
     if True == R['use_gpu']:
         model = model.cuda(device='cuda:'+str(R['gpuNo']))
 
@@ -286,12 +288,13 @@ def solve_Multiscale_PDE(R):
         test_x_bach = test_x_bach.cuda(device='cuda:' + str(R['gpuNo']))
 
     for i_epoch in range(R['max_epoch'] + 1):
-        x_it_batch = dataUtilizer2torch.rand_it(batchsize_it, R['input_dim'], region_a=region_l, region_b=region_r,
-                                                to_torch=True, to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'],
-                                                use_grad2x=True)
-        xl_bd_batch, xr_bd_batch = dataUtilizer2torch.rand_bd_1D(batchsize_bd, R['input_dim'], region_a=region_l,
-                                                                 region_b=region_r, to_torch=True, to_float=True,
-                                                                 to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
+        x_it_batch = dataUtilizer2torch.rand_in_1D(
+            batch_size=batchsize_it, variable_dim=R['input_dim'], region_a=region_l, region_b=region_r,
+            to_torch=True, to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'], use_grad=True)
+        xl_bd_batch, xr_bd_batch = dataUtilizer2torch.rand_bd_1D(
+            batch_size=batchsize_bd, variable_dim=R['input_dim'], region_a=region_l, region_b=region_r, to_torch=True,
+            to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
+
         if R['activate_penalty2bd_increase'] == 1:
             if i_epoch < int(R['max_epoch'] / 10):
                 temp_penalty_bd = bd_penalty_init
@@ -307,6 +310,7 @@ def solve_Multiscale_PDE(R):
                 temp_penalty_bd = 500 * bd_penalty_init
         else:
             temp_penalty_bd = bd_penalty_init
+
         if R['equa_name'] == 'multi_scale':
             UNN2train, loss_it, loss_dAU = model.loss_in2pLaplace(
                 X=x_it_batch, fside=f, if_lambda2fside=True, aeps=A_eps, loss_type=R['loss_type'],
@@ -351,7 +355,7 @@ def solve_Multiscale_PDE(R):
                 loss.item(), train_mse.item(), train_rel.item(), log_out=log_fileout)
 
             test_epoch.append(i_epoch / 1000)
-            unn2test = model.evaluate_MscaleDNN(X_points=test_x_bach)
+            unn2test = model.evaluate_FMPINN(X_points=test_x_bach)
             Uexact2test = utrue(test_x_bach)
 
             point_square_error = torch.square(Uexact2test - unn2test)

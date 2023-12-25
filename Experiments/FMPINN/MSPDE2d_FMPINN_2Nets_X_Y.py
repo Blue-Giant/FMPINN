@@ -52,23 +52,36 @@ class FMPINN(tn.Module):
              No2GPU:           if your computer have more than one GPU, please assign the number of GPU
         """
         super(FMPINN, self).__init__()
-        if 'FOURIER_SUBDNN' == str.upper(Model_name):
-            self.DNN = DNN_base.Fourier_SubNets3D(
+        if Model_name == 'FOURIER_SUBDNN':
+            self.DNN2Solu = DNN_base.Fourier_SubNets3D(
                 indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
                 actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
                 repeat_Highfreq=repeat_highFreq, to_gpu=use_gpu, gpu_no=No2GPU, num2subnets=len(factor2freq))
-        if 'FULL_FOURIER_SUBDNN' == str.upper(Model_name):
-            self.DNN = DNN_base.Full_Fourier_SubNets3D(
+
+            self.DNN2PNNX = DNN_base.Fourier_SubNets3D(
                 indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
                 actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
-                repeat_Highfreq=repeat_highFreq, to_gpu=use_gpu, gpu_no=No2GPU, scale=factor2freq,
-                num2subnets=len(factor2freq))
+                repeat_Highfreq=repeat_highFreq, to_gpu=use_gpu, gpu_no=No2GPU, num2subnets=len(factor2freq))
+
+            self.DNN2PNNY = DNN_base.Fourier_SubNets3D(
+                indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
+                actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
+                repeat_Highfreq=repeat_highFreq, to_gpu=use_gpu, gpu_no=No2GPU, num2subnets=len(factor2freq))
         else:
-            self.DNN = DNN_base.New_Fourier_SubNets3D(
+            self.DNN2Solu = DNN_base.Dense_FourierNet(
                 indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
                 actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
-                repeat_Highfreq=repeat_highFreq, to_gpu=use_gpu, gpu_no=No2GPU, scale=factor2freq,
-                num2subnets=len(factor2freq))
+                repeat_Highfreq=repeat_highFreq, to_gpu=use_gpu, gpu_no=No2GPU)
+
+            self.DNN2PNNX = DNN_base.Dense_FourierNet(
+                indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
+                actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
+                repeat_Highfreq=repeat_highFreq, to_gpu=use_gpu, gpu_no=No2GPU)
+
+            self.DNN2PNNY = DNN_base.Dense_FourierNet(
+                indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
+                actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
+                repeat_Highfreq=repeat_highFreq, to_gpu=use_gpu, gpu_no=No2GPU)
 
         self.input_dim = input_dim
         self.out_dim = out_dim
@@ -99,25 +112,24 @@ class FMPINN(tn.Module):
         self.mat2Y = torch.tensor([[0, 1]], dtype=self.float_type,
                                   device=self.opt2device, requires_grad=False)  # 2 行 1 列
 
-        self.mat2U = torch.tensor([[1], [0], [0]], dtype=self.float_type, device=self.opt2device)  # 3 行 1 列
-        self.mat2PX = torch.tensor([[0], [1], [0]], dtype=self.float_type, device=self.opt2device)  # 3 行 1 列
-        self.mat2PY = torch.tensor([[0], [0], [1]], dtype=self.float_type, device=self.opt2device)  # 1 行 3 列
-
     def loss_in2pLaplace(self, X=None, Y=None, fside=None, if_lambda2fside=True, aeps=None, if_lambda2aeps=True,
                          loss_type='ritz_loss', scale2lncosh=0.1):
         """
-        Calculating the loss of Laplace equation (*) in the interior points for given domain
-        -div(a·grad U) = f,  in Omega
-        U = g            on Partial Omega
+        Calculating the loss of Laplace equation with p=2 in the interior points for given domain
+        -div(a·grad U) = f,   in Omega
+        BU = g                on Partial Omega, where B is a boundary operator, g is a given function
         Args:
              XY:              the input data of variable. ------  float, shape=[B,D]
              fside:           the force side              ------  float, shape=[B,1]
              if_lambda2fside: the force-side is a lambda function or an array  ------ Bool
+             aeps:            the multi-scale coefficient       -----  float, shape=[B,1]
+             if_lambda2aeps:  the multi-scale coefficient is a lambda function or an array  ------ Bool
              loss_type:       the type of loss function(Ritz, L2, Lncosh)      ------ string
              scale2lncosh:    if the loss is lncosh, using it                  ------- float
         return:
              UNN:             the output data
-             loss_in:         the output loss in the interior points for given domain
+             loss2func:       the output loss in the interior points for given domain
+             loss2dAU:        the difference of divergence
         """
         assert (X is not None)
         assert (Y is not None)
@@ -139,10 +151,9 @@ class FMPINN(tn.Module):
             force_side = fside
 
         XY = torch.matmul(X, self.mat2X) + torch.matmul(Y, self.mat2Y)
-        UPNN = self.DNN(XY, scale=self.factor2freq, sFourier=self.sFourier)
-        UNN = torch.matmul(UPNN, self.mat2U)
-        PNNX = torch.matmul(UPNN, self.mat2PX)
-        PNNY = torch.matmul(UPNN, self.mat2PY)
+        UNN = self.DNN2Solu(XY, scale=self.factor2freq, sFourier=self.sFourier)
+        PNNX = self.DNN2PNNX(XY, scale=self.factor2freq, sFourier=self.sFourier)
+        PNNY = self.DNN2PNNY(XY, scale=self.factor2freq, sFourier=self.sFourier)
 
         gradX2UNN = torch.autograd.grad(UNN, X, grad_outputs=torch.ones_like(X), create_graph=True, retain_graph=True)
         gradY2UNN = torch.autograd.grad(UNN, Y, grad_outputs=torch.ones_like(Y), create_graph=True, retain_graph=True)
@@ -185,8 +196,7 @@ class FMPINN(tn.Module):
     def loss2bd(self, XY_bd=None, Ubd_exact=None, if_lambda2Ubd=True, loss_type='ritz_loss', scale2lncosh=0.1):
         """
         Calculating the loss of Laplace equation (*) on the boundary points for given boundary
-        -Laplace U = f,  in Omega
-        U = g            on Partial Omega
+        BU = g               on Partial Omega, where B is a boundary operator, g is a given function
         Args:
             XY_bd:         the input data of variable. ------  float, shape=[B,D]
             Ubd_exact:     the exact function or array for boundary condition
@@ -211,8 +221,7 @@ class FMPINN(tn.Module):
         else:
             Ubd = Ubd_exact
 
-        UPNN = self.DNN(XY_bd, scale=self.factor2freq, sFourier=self.sFourier)
-        UNN_bd = torch.matmul(UPNN, self.mat2U)
+        UNN_bd = self.DNN2Solu(XY_bd, scale=self.factor2freq, sFourier=self.sFourier)
         diff2bd = UNN_bd - Ubd
         if str.lower(loss_type) == 'l2_loss':
             loss_bd_square = torch.mul(diff2bd, diff2bd)
@@ -226,7 +235,7 @@ class FMPINN(tn.Module):
         """
         Calculating the regularization sum of weights and biases
         """
-        sum2WB = self.DNN.get_regular_sum2WB(regular_model=self.opt2regular_WB)
+        sum2WB = self.DNN2Solu.get_regular_sum2WB(regular_model=self.opt2regular_WB)
         return sum2WB
 
     def eval_FMPINN(self, XY_points=None):
@@ -243,8 +252,7 @@ class FMPINN(tn.Module):
         assert (lenght2XY_shape == 2)
         assert (shape2XY[-1] == 2)
 
-        UPNN = self.DNN(XY_points, scale=self.factor2freq, sFourier=self.sFourier)
-        UNN = torch.matmul(UPNN, self.mat2U)
+        UNN = self.DNN2Solu(XY_points, scale=self.factor2freq, sFourier=self.sFourier)
         return UNN
 
 
@@ -321,10 +329,15 @@ def solve_Multiscale_PDE(R):
                    name2actOut=R['name2act_out'], opt2regular_WB='L0', type2numeric='float32',
                    factor2freq=R['freq'], sFourier=R['sfourier'], repeat_highFreq=R['repeat_High_freq'],
                    use_gpu=R['use_gpu'], No2GPU=R['gpuNo'])
+
     if True == R['use_gpu']:
         model = model.cuda(device='cuda:'+str(R['gpuNo']))
 
-    params2Net = model.DNN.parameters()
+    params2SoluDNN = model.DNN2Solu.parameters()
+    params2PXDNN = model.DNN2PNNY.parameters()
+    params2PYDNN = model.DNN2PNNY.parameters()
+
+    params2Net = itertools.chain(params2SoluDNN, params2PXDNN, params2PYDNN)
 
     # 定义优化方法，并给定初始学习率
     # optimizer = torch.optim.SGD(params2Net, lr=init_lr)                     # SGD
@@ -467,11 +480,12 @@ def solve_Multiscale_PDE(R):
                 loss.item(), train_mse.item(), train_rel.item(), log_out=log_fileout)
 
             test_epoch.append(i_epoch / 1000)
-            UNN2test = model.eval_FMPINN(XY_points=test_xy_torch)
             if R['PDE_type'] == 'pLaplace_implicit':
+                UNN2test = model.eval_FMPINN(XY_points=test_xy_torch)
                 Utrue2test = torch.from_numpy(u_true.astype(np.float32))
                 Utrue2test = Utrue2test.cuda(device='cuda:' + str(R['gpuNo']))
             else:
+                UNN2test = model.evalulate_FMPINN(XY_points=test_xy_torch)
                 Utrue2test = u_true(torch.reshape(test_xy_torch[:, 0], shape=[-1, 1]),
                                     torch.reshape(test_xy_torch[:, 1], shape=[-1, 1]))
 
@@ -542,7 +556,7 @@ if __name__ == "__main__":
 
     # 文件保存路径设置
     file2results = 'Results'
-    store_file = 'FMPINN2D_X_Y'
+    store_file = 'FMPINN2D_2Nets_X_Y'
     # store_file = 'Boltzmann2D'
     BASE_DIR2FILE = os.path.dirname(os.path.abspath(__file__))
     split_BASE_DIR2FILE = os.path.split(BASE_DIR2FILE)
@@ -585,16 +599,16 @@ if __name__ == "__main__":
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Setup of multi-scale problem %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     R['input_dim'] = 2  # 输入维数，即问题的维数(几元问题)
-    R['output_dim'] = 1+2  # 输出维数
+    R['output_dim'] = 1  # 输出维数
 
     R['PDE_type'] = 'pLaplace_implicit'
     # R['equa_name'] = 'multi_scale2D_1'      # p=2 区域为 [-1,1]X[-1,1]
     # R['equa_name'] = 'multi_scale2D_2'      # p=2 区域为 [-1,1]X[-1,1]
     # R['equa_name'] = 'multi_scale2D_3'      # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
-    R['equa_name'] = 'multi_scale2D_4'        # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
+    # R['equa_name'] = 'multi_scale2D_4'        # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
     # R['equa_name'] = 'multi_scale2D_5'      # p=3 区域为 [0,1]X[0,1]   和例三的系数A一样
     # R['equa_name'] = 'multi_scale2D_6'      # p=3 区域为 [-1,1]X[-1,1] 和例三的系数A一样
-    # R['equa_name'] = 'multi_scale2D_9'  # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
+    R['equa_name'] = 'multi_scale2D_9'  # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
     # R['equa_name'] = 'multi_scale2D_10'  # p=2 区域为 [-1,1]X[-1,1] 论文中的例子
 
     # R['PDE_type'] = 'pLaplace_explicit'
@@ -684,30 +698,33 @@ if __name__ == "__main__":
     # R['init_boundary_penalty'] = 100                    # Regularization parameter for boundary conditions
     R['init_boundary_penalty'] = 10                       # Regularization parameter for boundary conditions
 
-    R['gradient_penalty'] = 5       # 这个因子最好                     # Regularization parameter for boundary conditions
-    # R['gradient_penalty'] = 10       # 这个因子最好                     # Regularization parameter for boundary conditions
+    # R['gradient_penalty'] = 5       # 这个因子最好                     # Regularization parameter for boundary conditions
+    R['gradient_penalty'] = 10       # 这个因子最好                     # Regularization parameter for boundary conditions
     # R['gradient_penalty'] = 15      # 这个因子最好                     # Regularization parameter for boundary conditions
     # R['gradient_penalty'] = 20  # Regularization parameter for boundary conditions
     # R['gradient_penalty'] = 25  # Regularization parameter for boundary conditions
-    # 对于2维来说，梯度惩罚因子选择，5好于10
 
     # &&&&&&&&&&&&&&&&&&& 使用的网络模型 &&&&&&&&&&&&&&&&&&&&&&&&&&&
-    R['model2NN'] = 'Fourier_SubDNN'
-    # R['model2NN'] = 'New_Fourier_SubDNN'
+    # R['model2NN'] = 'Fourier_SubDNN'
+    R['model2NN'] = 'Fourier_DNN'
 
     # &&&&&&&&&&&&&& 隐藏层的层数和每层神经元数目 网络的频率范围设置&&&&&&&&&&&&&&&&&&&&&&&
-    # R['hidden_layers'] = (50, 80, 60, 60, 40)
-    # R['hidden_layers'] = (50, 80, 60, 60, 30)
-    # R['hidden_layers'] = (40, 60, 40, 40, 30)
-    R['hidden_layers'] = (40, 60, 40, 40, 40)
-    # R['hidden_layers'] = (40, 80, 40, 40, 40)
-    # R['hidden_layers'] = (50, 80, 50, 50, 40)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=65, step=3)), axis=0)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=111, step=5)), axis=0)
-    # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=100, step=4), [100]), axis=0)
+    if R['model2NN'] == 'Fourier_SubDNN':
+        R['hidden_layers'] = (20, 30, 20, 20, 20)
+        # R['hidden_layers'] = (50, 80, 60, 60, 30)
+        # R['hidden_layers'] = (40, 60, 40, 40, 30)
+        # R['hidden_layers'] = (40, 60, 40, 40, 40)
+        # R['hidden_layers'] = (40, 80, 40, 40, 40)
+        # R['hidden_layers'] = (50, 80, 50, 50, 40)
+        # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=51, step=2)), axis=0)
+        # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=65, step=3)), axis=0)
+        # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=111, step=5)), axis=0)
+        # R['freq'] = np.concatenate(([1], np.arange(start=2, stop=100, step=4), [100]), axis=0)
 
-    R['freq'] = np.concatenate(([1, 2, 3, 4, 5], np.arange(start=10, stop=100, step=5), [100]), axis=0)
+        R['freq'] = np.concatenate(([1, 2, 3, 4, 5], np.arange(start=10, stop=100, step=5), [100]), axis=0)
+    else:
+        R['hidden_layers'] = (125, 150, 100, 80, 80)
+        R['freq'] = np.concatenate(([1], np.arange(start=2, stop=101, step=2)), axis=0)
 
     # &&&&&&&&&&&&&&&&&&& 激活函数的选择 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
     # R['name2act_in'] = 'relu'

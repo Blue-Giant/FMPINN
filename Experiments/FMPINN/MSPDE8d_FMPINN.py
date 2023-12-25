@@ -29,12 +29,12 @@ from utilizers import saveData
 from utilizers import Load_data2Mat
 
 
-class MscaleDNN(tn.Module):
+class FMPINN(tn.Module):
     def __init__(self, input_dim=8, out_dim=1, hidden_layer=None, Model_name='DNN', name2actIn='relu',
                  name2actHidden='relu', name2actOut='linear', opt2regular_WB='L2', type2numeric='float32',
                  factor2freq=None, sFourier=1.0, repeat_highFreq=True, use_gpu=False, No2GPU=0):
         """
-        initialing the class of MscaleDNN with given setups
+        initialing the class of FMPINN with given setups
         Args:
              input_dim:        the dimension of input data
              out_dim:          the dimension of output data
@@ -51,7 +51,7 @@ class MscaleDNN(tn.Module):
              use_gpu:          using cuda or not
              No2GPU:           if your computer have more than one GPU, please assign the number of GPU
         """
-        super(MscaleDNN, self).__init__()
+        super(FMPINN, self).__init__()
         self.DNN = DNN_base.Fourier_SubNets3D(
             indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
             actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
@@ -300,9 +300,9 @@ class MscaleDNN(tn.Module):
         sum2WB = self.DNN.get_regular_sum2WB(regular_model=self.opt2regular_WB)
         return sum2WB
 
-    def evalue_MscaleDNN(self, XYZRSTVW_points=None):
+    def eval_FMPINN(self, XYZRSTVW_points=None):
         """
-        Evaluating the MscaleDNN for testing points
+        Evaluating the FMPINN for testing points
         Args:
             XYZRSTVW_points: the testing input data of variable. ------  float, shape=[B,D]
         return:
@@ -348,14 +348,15 @@ def solve_Multiscale_PDE(R):
     u_true, f, Aeps = MS_LaplaceEqs.get_infos2pLaplace_8D(
         input_dim=input_dim, out_dim=out_dim, intervalL=region_lb, intervalR=region_rt, equa_name=R['equa_name'])
 
-    mscalednn = MscaleDNN(input_dim=R['input_dim'], out_dim=R['output_dim'], hidden_layer=R['hidden_layers'],
-                          Model_name=R['model2NN'], name2actIn=R['name2act_in'], name2actHidden=R['name2act_hidden'],
-                          name2actOut=R['name2act_out'], opt2regular_WB='L0', type2numeric='float32',
-                          factor2freq=R['freq'], use_gpu=R['use_gpu'], No2GPU=R['gpuNo'])
-    if True == R['use_gpu']:
-        mscalednn = mscalednn.cuda(device='cuda:' + str(R['gpuNo']))
+    model = FMPINN(input_dim=R['input_dim'], out_dim=R['output_dim'], hidden_layer=R['hidden_layers'],
+                   Model_name=R['model2NN'], name2actIn=R['name2act_in'], name2actHidden=R['name2act_hidden'],
+                   name2actOut=R['name2act_out'], opt2regular_WB='L0', type2numeric='float32',
+                   factor2freq=R['freq'], use_gpu=R['use_gpu'], No2GPU=R['gpuNo'])
 
-    params2Net = mscalednn.DNN.parameters()
+    if True == R['use_gpu']:
+        model = model.cuda(device='cuda:' + str(R['gpuNo']))
+
+    params2Net = model.DNN.parameters()
 
     # 定义优化方法，并给定初始学习率
     # optimizer = torch.optim.SGD(params2Net, lr=init_lr)                     # SGD
@@ -461,47 +462,47 @@ def solve_Multiscale_PDE(R):
         V = torch.reshape(xyzrstvw_it_batch[:, 6], shape=[-1, 1])
         W = torch.reshape(xyzrstvw_it_batch[:, 7], shape=[-1, 1])
         force = MS_LaplaceEqs.get_infos2force_8D(x=X, y=Y, z=Z, r=RRR, s=S, t=T, v=V, w=W)
-        UNN2train, loss_it, loss_dAU = mscalednn.loss_in2pLaplace(
+        UNN2train, loss_it, loss_dAU = model.loss_in2pLaplace(
             XYZRSTVW=xyzrstvw_it_batch, fside=force, if_lambda2fside=False, aeps=Aeps, if_lambda2aeps=True,
             loss_type=R['loss_type'], scale2lncosh=0.1)
 
-        loss_bd00 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw00_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd01 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw01_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd10 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw10_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd11 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw11_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd20 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw20_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd21 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw21_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd30 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw30_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd31 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw31_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd40 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw40_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd41 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw41_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd50 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw50_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd51 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw51_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd60 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw60_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd61 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw61_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd70 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw70_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
-        loss_bd71 = mscalednn.loss2bd(XYZRSTVW_bd=xyzrstvw71_batch, Ubd_exact=ubd,
-                                      if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd00 = model.loss2bd(XYZRSTVW_bd=xyzrstvw00_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd01 = model.loss2bd(XYZRSTVW_bd=xyzrstvw01_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd10 = model.loss2bd(XYZRSTVW_bd=xyzrstvw10_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd11 = model.loss2bd(XYZRSTVW_bd=xyzrstvw11_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd20 = model.loss2bd(XYZRSTVW_bd=xyzrstvw20_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd21 = model.loss2bd(XYZRSTVW_bd=xyzrstvw21_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd30 = model.loss2bd(XYZRSTVW_bd=xyzrstvw30_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd31 = model.loss2bd(XYZRSTVW_bd=xyzrstvw31_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd40 = model.loss2bd(XYZRSTVW_bd=xyzrstvw40_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd41 = model.loss2bd(XYZRSTVW_bd=xyzrstvw41_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd50 = model.loss2bd(XYZRSTVW_bd=xyzrstvw50_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd51 = model.loss2bd(XYZRSTVW_bd=xyzrstvw51_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd60 = model.loss2bd(XYZRSTVW_bd=xyzrstvw60_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd61 = model.loss2bd(XYZRSTVW_bd=xyzrstvw61_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd70 = model.loss2bd(XYZRSTVW_bd=xyzrstvw70_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
+        loss_bd71 = model.loss2bd(XYZRSTVW_bd=xyzrstvw71_batch, Ubd_exact=ubd,
+                                  if_lambda2Ubd=False, loss_type=R['loss_type2bd'])
 
         loss_bd = loss_bd00 + loss_bd01 + loss_bd10 + loss_bd11 + loss_bd20 + loss_bd21 + loss_bd30 + loss_bd31 + \
                   loss_bd40 + loss_bd41 + loss_bd50 + loss_bd51 + loss_bd60 + loss_bd61 + loss_bd70 + loss_bd71
 
-        PWB = penalty2WB * mscalednn.get_regularSum2WB()
+        PWB = penalty2WB * model.get_regularSum2WB()
 
         loss = loss_it + penalty2gd * loss_dAU + temp_penalty_bd * loss_bd + PWB  # 要优化的loss function
 
@@ -532,7 +533,7 @@ def solve_Multiscale_PDE(R):
 
             # ---------------------------   test network ----------------------------------------------
             test_epoch.append(i_epoch / 1000)
-            UNN2test = mscalednn.evalue_MscaleDNN(XYZRSTVW_points=test_xyzrstvw_torch)
+            UNN2test = model.eval_FMPINN(XYZRSTVW_points=test_xyzrstvw_torch)
 
             point_square_error = torch.square(Utrue2test - UNN2test)
             test_mse = torch.mean(point_square_error)

@@ -29,12 +29,12 @@ from utilizers import saveData
 from utilizers import Load_data2Mat
 
 
-class MscaleDNN(tn.Module):
+class FMPINN(tn.Module):
     def __init__(self, input_dim=4, out_dim=1, hidden_layer=None, Model_name='DNN', name2actIn='relu',
                  name2actHidden='relu', name2actOut='linear', opt2regular_WB='L2', type2numeric='float32',
                  factor2freq=None, sFourier=1.0, repeat_highFreq=True, use_gpu=False, No2GPU=0):
         """
-        initialing the class of MscaleDNN with given setups
+        initialing the class of FMPINN with given setups
         Args:
              input_dim:        the dimension of input data
              out_dim:          the dimension of output data
@@ -51,7 +51,7 @@ class MscaleDNN(tn.Module):
              use_gpu:          using cuda or not
              No2GPU:           if your computer have more than one GPU, please assign the number of GPU
         """
-        super(MscaleDNN, self).__init__()
+        super(FMPINN, self).__init__()
         self.DNN = DNN_base.Fourier_SubNets3D(
             indim=input_dim, outdim=out_dim, hidden_units=hidden_layer, name2Model=Model_name,
             actName2in=name2actIn, actName=name2actHidden, actName2out=name2actOut, type2float=type2numeric,
@@ -225,9 +225,9 @@ class MscaleDNN(tn.Module):
         sum2WB = self.DNN.get_regular_sum2WB(regular_model=self.opt2regular_WB)
         return sum2WB
 
-    def evalue_MscaleDNN(self, XYZ_points=None):
+    def eval_FMPINN(self, XYZ_points=None):
         """
-        Evaluating the MscaleDNN for testing points
+        Evaluating the FMPINN for testing points
         Args:
             XYZ_points: the testing input data of variable. ------  float, shape=[B,D]
         return:
@@ -383,11 +383,12 @@ def solve_Multiscale_PDE(R):
     u_true, f, A_eps, u_left, u_right, u_front, u_behind, u_bottom, u_top = MS_LaplaceEqs.get_infos2MS_Laplace3D_E10(
             eps=R['epsilon'])
 
-    model = MscaleDNN(input_dim=R['input_dim'], out_dim=R['output_dim'], hidden_layer=R['hidden_layers'],
-                      Model_name=R['model2NN'], name2actIn=R['name2act_in'], name2actHidden=R['name2act_hidden'],
-                      name2actOut=R['name2act_out'], opt2regular_WB='L0', type2numeric='float32',
-                      factor2freq=R['freq'], use_gpu=R['use_gpu'], No2GPU=R['gpuNo'],
-                      repeat_highFreq=R['repeat_High_freq'])
+    model = FMPINN(input_dim=R['input_dim'], out_dim=R['output_dim'], hidden_layer=R['hidden_layers'],
+                   Model_name=R['model2NN'], name2actIn=R['name2act_in'], name2actHidden=R['name2act_hidden'],
+                   name2actOut=R['name2act_out'], opt2regular_WB='L0', type2numeric='float32',
+                   factor2freq=R['freq'], use_gpu=R['use_gpu'], No2GPU=R['gpuNo'],
+                   repeat_highFreq=R['repeat_High_freq'])
+
     if True == R['use_gpu']:
         model = model.cuda(device='cuda:' + str(R['gpuNo']))
 
@@ -414,14 +415,10 @@ def solve_Multiscale_PDE(R):
     # 画网格解图
     if R['testData_model'] == 'random_generate':
         # 生成测试数据，用于测试训练后的网络
-        # test_bach_size = 400
-        # size2test = 20
-        # test_bach_size = 900
-        # size2test = 30
-        test_bach_size = 1600
-        size2test = 40
-        # test_bach_size = 4900
-        # size2test = 70
+        # test_bach_size = 1600
+        # size2test = 40
+        test_bach_size = 4900
+        size2test = 70
         # test_bach_size = 10000
         # size2test = 100
         # test_bach_size = 40000
@@ -477,6 +474,7 @@ def solve_Multiscale_PDE(R):
         # test_xyz_torch, Utrue2test = model.load_test_solu_XYZ(eps=R['epsilon'], z_slice=0.5, with_gpu=R['use_gpu'])
         # test_xyz_torch, Utrue2test = model.load_test_data_low_res(eps=R['epsilon'], z_slice=0.5, with_gpu=R['use_gpu'])
         test_xyz_torch, Utrue2test = model.load_test_data2mat(eps=R['epsilon'], slice_index2z=20, with_gpu=R['use_gpu'])
+        size2test = 65
 
     if True == R['use_gpu']:
         numpy_test_xyz = test_xyz_torch.cpu().detach().numpy()
@@ -486,18 +484,21 @@ def solve_Multiscale_PDE(R):
         saveData.save_testData_or_solus2mat(numpy_test_xyz, dataName='testXYZ', outPath=R['FolderName'])
 
     for i_epoch in range(R['max_epoch'] + 1):
-        x_it_batch = dataUtilizer2torch.rand_it_lhs(batchsize_it, 1, region_a=region_lb,
-                                                    region_b=region_rt, to_float=True, to_cuda=R['use_gpu'],
-                                                    gpu_no=R['gpuNo'], use_grad2x=True)
-        y_it_batch = dataUtilizer2torch.rand_it_lhs(batchsize_it, 1, region_a=region_lb,
-                                                    region_b=region_rt, to_float=True, to_cuda=R['use_gpu'],
-                                                    gpu_no=R['gpuNo'], use_grad2x=True)
-        z_it_batch = dataUtilizer2torch.rand_it_lhs(batchsize_it, 1, region_a=region_lb,
-                                                    region_b=region_rt, to_float=True, to_cuda=R['use_gpu'],
-                                                    gpu_no=R['gpuNo'], use_grad2x=True)
+        x_it_batch = dataUtilizer2torch.rand_in_1D(
+            batch_size=batchsize_it, variable_dim=1, region_a=region_lb, region_b=region_rt, to_float=True,
+            to_torch=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'], use_grad=True)
+        y_it_batch = dataUtilizer2torch.rand_in_1D(
+            batch_size=batchsize_it, variable_dim=1, region_a=region_lb, region_b=region_rt, to_float=True,
+            to_torch=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'], use_grad=True)
+        z_it_batch = dataUtilizer2torch.rand_in_1D(
+            batch_size=batchsize_it, variable_dim=1, region_a=region_lb, region_b=region_rt, to_float=True,
+            to_torch=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'], use_grad=True)
+
         xyz_bottom_batch, xyz_top_batch, xyz_left_batch, xyz_right_batch, xyz_front_batch, xyz_behind_batch = \
-            dataUtilizer2torch.rand_bd_3D_lhs(batchsize_bd, R['input_dim'], region_a=region_lb, region_b=region_rt,
-                                              to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
+            dataUtilizer2torch.rand_bd_3D(batch_size=batchsize_bd, variable_dim=R['input_dim'], region_left=region_lb,
+                                          region_right=region_rt, region_behind=region_lb, region_front=region_rt,
+                                          region_bottom=region_lb, region_top=region_rt, to_torch=True, to_float=True,
+                                          to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
 
         if R['activate_penalty2bd_increase'] == 1:
             if i_epoch < int(R['max_epoch'] / 10):
@@ -570,7 +571,7 @@ def solve_Multiscale_PDE(R):
 
             # ---------------------------   test network ----------------------------------------------
             test_epoch.append(i_epoch / 1000)
-            UNN2test = model.evalue_MscaleDNN(XYZ_points=test_xyz_torch)
+            UNN2test = model.eval_FMPINN(XYZ_points=test_xyz_torch)
 
             point_square_error = torch.square(Utrue2test - UNN2test)
             test_mse = torch.mean(point_square_error)

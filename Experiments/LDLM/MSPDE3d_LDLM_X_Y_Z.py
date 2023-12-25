@@ -476,18 +476,21 @@ def solve_Multiscale_PDE(R):
         saveData.save_testData_or_solus2mat(numpy_test_xyz, dataName='testXYZ', outPath=R['FolderName'])
 
     for i_epoch in range(R['max_epoch'] + 1):
-        x_it_batch = dataUtilizer2torch.rand_it_lhs(batchsize_it, 1, region_a=region_lb,
-                                                    region_b=region_rt, to_float=True, to_cuda=R['use_gpu'],
-                                                    gpu_no=R['gpuNo'], use_grad2x=True)
-        y_it_batch = dataUtilizer2torch.rand_it_lhs(batchsize_it, 1, region_a=region_lb,
-                                                    region_b=region_rt, to_float=True, to_cuda=R['use_gpu'],
-                                                    gpu_no=R['gpuNo'], use_grad2x=True)
-        z_it_batch = dataUtilizer2torch.rand_it_lhs(batchsize_it, 1, region_a=region_lb,
-                                                    region_b=region_rt, to_float=True, to_cuda=R['use_gpu'],
-                                                    gpu_no=R['gpuNo'], use_grad2x=True)
+        x_it_batch = dataUtilizer2torch.rand_in_1D(
+            batch_size=batchsize_it, variable_dim=1, region_a=region_lb, region_b=region_rt, to_float=True,
+            to_torch=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'], use_grad=True)
+        y_it_batch = dataUtilizer2torch.rand_in_1D(
+            batch_size=batchsize_it, variable_dim=1, region_a=region_lb, region_b=region_rt, to_float=True,
+            to_torch=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'], use_grad=True)
+        z_it_batch = dataUtilizer2torch.rand_in_1D(
+            batch_size=batchsize_it, variable_dim=1, region_a=region_lb, region_b=region_rt, to_float=True,
+            to_torch=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'], use_grad=True)
+
         xyz_bottom_batch, xyz_top_batch, xyz_left_batch, xyz_right_batch, xyz_front_batch, xyz_behind_batch = \
-            dataUtilizer2torch.rand_bd_3D_lhs(batchsize_bd, R['input_dim'], region_a=region_lb, region_b=region_rt,
-                                              to_float=True, to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
+            dataUtilizer2torch.rand_bd_3D(batch_size=batchsize_bd, variable_dim=R['input_dim'], region_left=region_lb,
+                                          region_right=region_rt, region_behind=region_lb, region_front=region_rt,
+                                          region_bottom=region_lb, region_top=region_rt, to_torch=True, to_float=True,
+                                          to_cuda=R['use_gpu'], gpu_no=R['gpuNo'])
 
         if R['activate_penalty2bd_increase'] == 1:
             if i_epoch < int(R['max_epoch'] / 10):

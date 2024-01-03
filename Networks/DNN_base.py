@@ -2602,7 +2602,7 @@ class New_Fourier_SubNets3D(tn.Module):
     """
     def __init__(self, indim=1, outdim=1, hidden_units=None, name2Model='DNN', actName2in='tanh', actName='tanh',
                  actName2out='linear', scope2W='Weight', scope2B='Bias', repeat_Highfreq=True, type2float='float32',
-                 to_gpu=False, gpu_no=0, num2subnets=5, opt2contri_subnets='mean_inv2scale',
+                 to_gpu=False, gpu_no=0, scale=None, num2subnets=5, opt2contri_subnets='mean_inv2scale',
                  actName2subnet_weight='linear'):
         super(New_Fourier_SubNets3D, self).__init__()
         self.indim = indim
@@ -2632,6 +2632,20 @@ class New_Fourier_SubNets3D(tn.Module):
             self.opt2device = 'cuda:' + str(gpu_no)
         else:
             self.opt2device = 'cpu'
+
+        assert (len(scale) != 0)
+        shape2scale = np.shape(scale)
+        if len(shape2scale) == 2:
+            exapnd_scale = np.expand_dims(scale, axis=-1)
+            exapnd2_scale = exapnd_scale.astype(dtype=np.float32)
+        else:
+            expand_scale = np.expand_dims(scale, axis=-1)
+            exapnd2_scale = np.expand_dims(expand_scale, axis=-1)
+            exapnd2_scale = exapnd2_scale.astype(dtype=np.float32)
+
+        self.torch_mixcoe = torch.from_numpy(exapnd2_scale)
+        if self.to_gpu:
+            self.torch_mixcoe = self.torch_mixcoe.cuda(device='cuda:' + str(self.gpu_no))
 
         # if opt2contri_subnets == 'sum_inv2subnet_order' or opt2contri_subnets == 'mean_inv2subnet_order' or \
         #         opt2contri_subnets == 'softmax_inv2subnet_order':
@@ -2730,7 +2744,7 @@ class New_Fourier_SubNets3D(tn.Module):
 
         len2hidden = len(self.hidden_units)
         H_in = torch.matmul(inputs, self.Ws[0])
-        H_scale = torch.multiply(scale, H_in)
+        H_scale = torch.multiply(self.torch_mixcoe, H_in)
         H = sFourier * torch.cat([torch.cos(H_scale), torch.sin(H_scale)], dim=-1)
 
         #  ---resnet(one-step skip connection for two consecutive layers if have equal neurons）---
@@ -2746,7 +2760,7 @@ class New_Fourier_SubNets3D(tn.Module):
         H = torch.add(torch.matmul(H, self.Ws[-1]), self.Bs[-1])
         out2subnets = self.actFunc_out(H)
 
-        scale_out_result = torch.multiply(out2subnets, 1.0/scale)
+        scale_out_result = torch.multiply(out2subnets, 1.0/self.torch_mixcoe)
         out_result = torch.mean(scale_out_result, dim=0)
         return out_result
 
@@ -2771,8 +2785,8 @@ class Full_Fourier_SubNets3D(tn.Module):
     """
     def __init__(self, indim=1, outdim=1, hidden_units=None, name2Model='DNN', actName2in='tanh', actName='tanh',
                  actName2out='linear', scope2W='Weight', scope2B='Bias', repeat_Highfreq=True, type2float='float32',
-                 to_gpu=False, gpu_no=0, num2subnets=5, sFourier2hidden=1.0, opt2contri_subnets='mean_inv2scale',
-                 actName2subnet_weight='linear'):
+                 to_gpu=False, gpu_no=0, scale=None, num2subnets=5, sFourier2hidden=1.0,
+                 opt2contri_subnets='mean_inv2scale', actName2subnet_weight='linear'):
         super(Full_Fourier_SubNets3D, self).__init__()
         self.indim = indim
         self.outdim = outdim
@@ -2802,6 +2816,20 @@ class Full_Fourier_SubNets3D(tn.Module):
             self.opt2device = 'cuda:' + str(gpu_no)
         else:
             self.opt2device = 'cpu'
+
+        assert (len(scale) != 0)
+        shape2scale = np.shape(scale)
+        if len(shape2scale) == 2:
+            exapnd_scale = np.expand_dims(scale, axis=-1)
+            exapnd2_scale = exapnd_scale.astype(dtype=np.float32)
+        else:
+            expand_scale = np.expand_dims(scale, axis=-1)
+            exapnd2_scale = np.expand_dims(expand_scale, axis=-1)
+            exapnd2_scale = exapnd2_scale.astype(dtype=np.float32)
+
+        self.torch_mixcoe = torch.from_numpy(exapnd2_scale)
+        if self.to_gpu:
+            self.torch_mixcoe = self.torch_mixcoe.cuda(device='cuda:' + str(self.gpu_no))
 
         # if opt2contri_subnets == 'sum_inv2subnet_order' or opt2contri_subnets == 'mean_inv2subnet_order' or \
         #         opt2contri_subnets == 'softmax_inv2subnet_order':
@@ -2889,7 +2917,7 @@ class Full_Fourier_SubNets3D(tn.Module):
         len2hidden = len(self.hidden_units)
 
         H_in = torch.matmul(inputs, self.Ws[0])
-        H_scale = torch.multiply(scale, H_in)
+        H_scale = torch.multiply(self.torch_mixcoe, H_in)
         H = sFourier * torch.cat([torch.cos(H_scale), torch.sin(H_scale)], dim=-1)
 
         #  ---resnet(one-step skip connection for two consecutive layers if have equal neurons）---
@@ -2905,7 +2933,7 @@ class Full_Fourier_SubNets3D(tn.Module):
         H = torch.add(torch.matmul(H, self.Ws[-1]), self.Bs[-1])
         out2subnets = self.actFunc_out(H)
 
-        scale_out_result = torch.multiply(out2subnets, 1.0/scale)
+        scale_out_result = torch.multiply(out2subnets, 1.0/self.torch_mixcoe)
         out_result = torch.mean(scale_out_result, dim=0)
         return out_result
 

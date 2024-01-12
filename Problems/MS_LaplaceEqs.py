@@ -14,6 +14,9 @@ def get_infos2pLaplace1D(in_dim=None, out_dim=None, intervalL=0, intervalR=1, in
             1 / torch.pi * torch.sin(torch.pi * 2 * x / eps) * (1 / 4 - x / 2) - eps / (4 * torch.pi ** 2) * torch.cos(
         torch.pi * 2 * x / eps) + eps / 4 / torch.pi ** 2)
 
+    dutrue = lambda x: 1 - 2.0*x + 0.5 * torch.cos(torch.pi * 2 * x / eps) + \
+                       0.5*eps/torch.pi * torch.sin(torch.pi * 2 * x / eps) - x * torch.cos(torch.pi * 2 * x / eps)
+
     u_l = lambda x: torch.zeros_like(x)
 
     u_r = lambda x: torch.zeros_like(x)
@@ -45,7 +48,7 @@ def get_infos2pLaplace1D(in_dim=None, out_dim=None, intervalL=0, intervalR=1, in
                               np.power(2, index2p - 2) * eps * ((1 - 2 * x) ** 2) * (
                                   (2 + np.cos(2 * np.pi * x / eps)) ** 3))
 
-    return utrue, f, aeps, u_l, u_r
+    return utrue, dutrue, f, aeps, u_l, u_r
 
 
 def get_infos2pLaplace1D_3scale(in_dim=None, out_dim=None, intervalL=0, intervalR=1, index2p=2, eps1=0.1, eps2=0.01, equa_name=None):
@@ -53,13 +56,15 @@ def get_infos2pLaplace1D_3scale(in_dim=None, out_dim=None, intervalL=0, interval
 
     utrue = lambda x: x-torch.mul(x, x)+(eps1/(4*torch.pi))*torch.sin(2*torch.pi*x/eps1)+(eps2/(4*torch.pi))*torch.sin(2*torch.pi*x/eps2)
 
+    dutrue = lambda x: 1 - 2.0*x + 0.5 * torch.cos(2 * torch.pi * x / eps1) + 0.5 * torch.cos(2 * torch.pi * x / eps2)
+
     u_l = lambda x: torch.zeros_like(x)
 
     u_r = lambda x: torch.zeros_like(x)
 
     f = lambda x: torch.ones_like(x)
 
-    return utrue, f, aeps, u_l, u_r
+    return utrue, dutrue, f, aeps, u_l, u_r
 
 
 def force_side_3scale(x, eps1=0.02, eps2=0.01):

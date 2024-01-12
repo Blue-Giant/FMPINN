@@ -15,6 +15,7 @@ def get_infos2Laplace_1D(input_dim=1, out_dim=1, intervalL=0.0, intervalR=1.0, e
 
 # 偏微分方程的一些信息:边界条件，初始条件，真解，右端项函数
 def get_infos2Laplace_2D(input_dim=1, out_dim=1, left_bottom=0.0, right_top=1.0, equa_name=None):
+    # -Laplace U = f
     if equa_name == 'PDE1':
         # u=exp(-x)(x_y^3), f = -exp(-x)(x-2+y^3+6y)
         f_side = lambda x, y: -(torch.exp(-1.0*x)) * (x - 2 + torch.pow(y, 3) + 6 * y)
@@ -86,6 +87,39 @@ def get_infos2Laplace_2D(input_dim=1, out_dim=1, left_bottom=0.0, right_top=1.0,
         ux_right = lambda x, y: 0.5 * torch.multiply(torch.pow(right_top, 2), torch.pow(y, 2)) + right_top + y
         uy_bottom = lambda x, y: 0.5 * torch.multiply(torch.pow(x, 2), torch.pow(left_bottom, 2)) + x + left_bottom
         uy_top = lambda x, y: 0.5 * torch.multiply(torch.pow(x, 2), torch.pow(right_top, 2)) + x + right_top
+        return f_side, u_true, ux_left, ux_right, uy_bottom, uy_top
+    elif equa_name == 'PDE8':
+        # Laplace U = f and U = exp(x)*exp(y)  f = 2exp(x)*exp(y)
+        f_side = lambda x, y: 2.0 * torch.exp(x) * torch.exp(y)
+
+        u_true = lambda x, y: torch.exp(x) * torch.exp(y)
+
+        ux_left = lambda x, y: torch.exp(x) * torch.exp(y)
+        ux_right = lambda x, y: torch.exp(x) * torch.exp(y)
+        uy_bottom = lambda x, y: torch.exp(x) * torch.exp(y)
+        uy_top = lambda x, y: torch.exp(x) * torch.exp(y)
+        return f_side, u_true, ux_left, ux_right, uy_bottom, uy_top
+    elif equa_name == 'PDE9':
+        # Laplace U = f and U = sin(pi*x)sin(pi*y)  f = -2*pi*pi*sin(pi*x)sin(pi*y)
+        f_side = lambda x, y: -2.0 * torch.pi * torch.pi * torch.sin(torch.pi * x) * torch.sin(torch.pi * y)
+
+        u_true = lambda x, y: torch.sin(torch.pi * x) * torch.sin(torch.pi * y)
+
+        ux_left = lambda x, y: torch.sin(torch.pi * x) * torch.sin(torch.pi * y)
+        ux_right = lambda x, y: torch.sin(torch.pi * x) * torch.sin(torch.pi * y)
+        uy_bottom = lambda x, y: torch.sin(torch.pi * x) * torch.sin(torch.pi * y)
+        uy_top = lambda x, y: torch.sin(torch.pi * x) * torch.sin(torch.pi * y)
+        return f_side, u_true, ux_left, ux_right, uy_bottom, uy_top
+    elif equa_name == 'PDE10':
+        # Laplace U = f and U = sin(3pi*x)sin(4pi*y)  f = -25*pi*pi*sin(3pi*x)sin(4pi*y)
+        f_side = lambda x, y: -25.0 * torch.pi * torch.pi * torch.sin(3 * torch.pi * x) * torch.sin(4 * torch.pi * y)
+
+        u_true = lambda x, y: torch.sin(3 * torch.pi * x) * torch.sin(4 * torch.pi * y)
+
+        ux_left = lambda x, y: torch.sin(3 * torch.pi * x) * torch.sin(4 * torch.pi * y)
+        ux_right = lambda x, y: torch.sin(3 * torch.pi * x) * torch.sin(4 * torch.pi * y)
+        uy_bottom = lambda x, y: torch.sin(3 * torch.pi * x) * torch.sin(4 * torch.pi * y)
+        uy_top = lambda x, y: torch.sin(3 * torch.pi * x) * torch.sin(4 * torch.pi * y)
         return f_side, u_true, ux_left, ux_right, uy_bottom, uy_top
 
 

@@ -33,3 +33,12 @@ Deep neural networks have garnered widespread attention due to their simplicity 
 5----0.00651
 
 20----0.0115
+
+# Remarks
+1. The all networks in DNN_base are modified for initializing their corresponding Weights and Biases, and 
+   configuring the type of float and the device(cpu or gpu) when initializing the network. Unfortually, the 
+   performance of Fourier_Subnets3D will be decrease for solving the elliptic multi-scale PDEs when eps=0.001.
+   This is a open problem, it is necessary to study.
+2. The codes for various networks in DNN_base_old, FMPINN1d using these codes to solve multi-scale PDEs can 
+   obtain wonderful results. The difference of codes in DNN_base_old and DNN_base are the initialization of 
+   networks with device.

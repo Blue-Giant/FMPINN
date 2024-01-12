@@ -82,6 +82,46 @@ def dictionary_out2file(R_dic, log_fileout):
         DNN_tools.log_string('no activate the stop_step and given_step = default: %s\n' % str(R_dic['max_epoch']), log_fileout)
 
 
+# 记录字典中的一些设置
+def dictionary_out2file2Biharmonic(R_dic, log_fileout):
+    DNN_tools.log_string('Equation type for problem: %s\n' % (R_dic['PDE_type']), log_fileout)
+    DNN_tools.log_string('Equation name for problem: %s\n' % (R_dic['equa_name']), log_fileout)
+    DNN_tools.log_string('Network model of solving problem: %s\n' % str(R_dic['model2NN']), log_fileout)
+    DNN_tools.log_string('activate function for Input: %s\n' % str(R_dic['name2act_in']), log_fileout)
+    DNN_tools.log_string('activate function for Hidden-layer: %s\n' % str(R_dic['name2act_hidden']), log_fileout)
+    DNN_tools.log_string('activate function for Output: %s\n' % str(R_dic['name2act_out']), log_fileout)
+    DNN_tools.log_string('hidden layers: %s\n' % str(R_dic['hidden_layers']), log_fileout)
+    # DNN_tools.log_string('Regular or Irregular domain: %s\n' % str(R_dic['shape2Domain']), log_fileout)
+
+    if str.upper(R_dic['model2NN']) != 'DNN':
+        DNN_tools.log_string('frequency: %s\n' % str(R_dic['freq']), log_fileout)
+
+    if (R_dic['optimizer_name']).title() == 'Adam':
+        DNN_tools.log_string('optimizer:%s\n' % str(R_dic['optimizer_name']), log_fileout)
+    else:
+        DNN_tools.log_string('optimizer:%s  with momentum=%f\n' % (R_dic['optimizer_name'], R_dic['momentum']), log_fileout)
+
+    if R_dic['activate_stop'] != 0:
+        DNN_tools.log_string('activate the stop_step and given_step= %s\n' % str(R_dic['max_epoch']), log_fileout)
+    else:
+        DNN_tools.log_string('no activate the stop_step and given_step = default: %s\n' % str(R_dic['max_epoch']), log_fileout)
+
+    DNN_tools.log_string('Init learning rate: %s\n' % str(R_dic['learning_rate']), log_fileout)
+
+    if 'Dirichlet' == R_dic['opt2Boundary']:
+        DNN_tools.log_string('Boundary types to derivative: %s\n' % str('Dirichlet boundary'), log_fileout)
+    else:
+        DNN_tools.log_string('Boundary types to derivative: %s\n' % str('Navier boundary'), log_fileout)
+    DNN_tools.log_string('Initial boundary penalty: %s\n' % str(R_dic['init_boundary_penalty']), log_fileout)
+    DNN_tools.log_string('Batch-size 2 boundary: %s\n' % str(R_dic['batch_size2boundary']), log_fileout)
+
+    DNN_tools.log_string('Batch-size 2 interior: %s\n' % str(R_dic['batch_size2interior']), log_fileout)
+
+    if R_dic['loss_type'] == 'variational_loss':
+        DNN_tools.log_string('Loss function: variational loss\n', log_fileout)
+    else:
+        DNN_tools.log_string('Loss function: L2 loss\n', log_fileout)
+
 def print_and_log_train_one_epoch(i_epoch, run_time, tmp_lr, temp_penalty_bd, pwb, loss_it_tmp, loss_bd_tmp, loss_tmp,
                                   train_mse_tmp, train_rel_tmp, log_out=None):
     # 将运行结果打印出来

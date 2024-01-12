@@ -258,8 +258,8 @@ def rand_bd_1D(batch_size=1000, variable_dim=1, region_a=0.0, region_b=1.0, to_t
     # reshape(-1,1):数组新的shape属性应该要与原来的配套，如果等于-1的话，那么Numpy会根据剩下的维度计算出数组的另外一个shape属性值。
     assert (int(variable_dim) == 1)
 
-    region_a = float(region_a)
-    region_b = float(region_b)
+    # region_a = float(region_a)
+    # region_b = float(region_b)
 
     x_left_bd = np.ones(shape=[batch_size, 1], dtype=np.float32) * region_a
     x_right_bd = np.ones(shape=[batch_size, 1], dtype=np.float32) * region_b

@@ -199,6 +199,31 @@ def get_meshdata2Convection(equation_name=None, mesh_number=2, to_torch=False, t
     return xy_data
 
 
+def get_meshData(base_path=None,  mesh_number=2, to_torch=False, to_float=True, to_cuda=False, gpu_no=0,
+                 use_grad2x=False):
+    file_name2data = base_path + str('meshXY') + str(mesh_number) + str('.mat')
+    mesh_points = load_Matlab_data(file_name2data)
+    XY_points = mesh_points['meshXY']
+    shape2XY = np.shape(XY_points)
+    assert(len(shape2XY) == 2)
+    if shape2XY[0] == 2:
+        xy_data = np.transpose(XY_points, (1, 0))
+    else:
+        xy_data = XY_points
+
+    if to_float:
+        xy_data = xy_data.astype(np.float32)
+
+    if to_torch:
+        xy_data = torch.from_numpy(xy_data)
+
+        if to_cuda:
+            xy_data = xy_data.cuda(device='cuda:' + str(gpu_no))
+
+        xy_data.requires_grad = use_grad2x
+    return xy_data
+
+
 if __name__ == '__main__':
     mat_data_path = '../dataMat_highDim'
     mat_data = get_randomData2mat(dim=2, data_path=mat_data_path)

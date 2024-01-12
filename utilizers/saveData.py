@@ -133,6 +133,14 @@ def save_2testSolus2mat(exact_solution, dnn_solution, actName=None, actName1=Non
     scio.savemat(outFile2data, {key2mat_1: exact_solution, key2mat_2: dnn_solution})
 
 
+def save_2testSolus2Grad(exact_solution, dnn_solution, actName=None, actName1=None, outPath=None):
+    outFile2data = '%s/test_solus2grad.mat' % (outPath)
+    if str.lower(actName) == 'utrue':
+        key2mat_1 = 'Utrue'
+    key2mat_2 = 'U%s' % (actName1)
+    scio.savemat(outFile2data, {key2mat_1: exact_solution, key2mat_2: dnn_solution})
+
+
 # 合并保存数据
 def save_3testSolus2mat(exact_solution, solution2act1, solution2act2, actName='Utrue', actName1=None, actName2=None,
                         outPath=None):
@@ -170,6 +178,12 @@ def save_testLoss2mat_1act_Func(loss_it, loss_bd, loss_bd2, loss, actName=None, 
     key2mat_3 = 'loss_bd2'
     key2mat_4 = 'loss'
     scio.savemat(outFile2data, {key2mat_1: loss_it, key2mat_2: loss_bd, key2mat_3: loss_bd2, key2mat_4: loss})
+
+
+def save_testERR2mat(err_data, Name2error=None, outPath=None):
+    outFile2data = '%s/test_%s.mat' % (outPath, Name2error)
+    key2mat_1 = str.lower(Name2error)
+    scio.savemat(outFile2data, {key2mat_1: err_data})
 
 
 def save_testMSE_REL2mat(Mse_data, Rel_data, actName=None, outPath=None):

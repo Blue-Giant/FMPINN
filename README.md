@@ -6,7 +6,7 @@ Solving a class of multi-scale elliptic PDEs by means of Fourier-based mixed phy
 
 created by Xi'an Li, Jinran Wu, You-Gan Wang, Xin Tai and Jianhua Xu
 
-[[Paper]](https://pdf.sciencedirectassets.com/271503/1-s2.0-S0898122124X00048/1-s2.0-S0898122124000348/main.pdf)
+[[Paper]](https://arxiv.org/pdf/2306.13385.pdf)
 
 # Abstract
 

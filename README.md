@@ -2,7 +2,7 @@
 Solving a class of elliptic partial differential equations(PDEs) with multiple scales utilizing Fourier-based mixed physics informed neural networks(dubbed FMPINN), the solver of FMPINN is configured as a multi-scale deep neural networks.
 
 # Title of paper
-Solving a class of multi-scale elliptic PDEs by means of Fourier-based mixed physics informed neural networks
+Solving a class of multi-scale elliptic PDEs by Fourier-based mixed physics informed neural networks
 
 created by Xi'an Li, Jinran Wu, You-Gan Wang, Xin Tai and Jianhua Xu
 
